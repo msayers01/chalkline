@@ -1,0 +1,25 @@
+% Builds luaotfload's font caches into the system tree at install time, so
+% sandboxed compiles (fresh HOME, read-only TeX tree) do not re-parse every
+% font on every job. Load every font any preset can use, in every shape.
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\directlua{luaotfload.add_fallback("clfallback", {"Latin Modern Math:mode=node;", "file:FreeSerif.otf:mode=node;"})}
+\directlua{luaotfload.add_fallback("clfallbacksans", {"Fira Math:mode=node;", "file:FreeSans.otf:mode=node;"})}
+\setmainfont{Latin Modern Roman}[RawFeature={fallback=clfallback}]
+\newfontfamily\pagella{TeX Gyre Pagella}[RawFeature={fallback=clfallback}]
+\newfontfamily\termes{TeX Gyre Termes}[RawFeature={fallback=clfallback}]
+\newfontfamily\fira{Fira Sans}[RawFeature={fallback=clfallbacksans}]
+\setmathfont{Latin Modern Math}
+\setmathfont{TeX Gyre Pagella Math}[version=pagella]
+\setmathfont{TeX Gyre Termes Math}[version=termes]
+\setmathfont{Fira Math}[version=fira]
+\newcommand\sample{Text \textbf{bold} \textit{italic} \textbf{\textit{both}} \textsc{caps} \small small
+  \normalsize Ελληνικά ≤ → √ Привет “quotes” — \(x^{2} \leq \sqrt{y}\).\par}
+\begin{document}
+\sample
+{\pagella\mathversion{pagella}\sample}
+{\termes\mathversion{termes}\sample}
+{\fira\mathversion{fira}\sample}
+\end{document}

@@ -46,5 +46,14 @@ grep -vE '^\s*(#|$)' "$HERE/texlive-packages.txt" | xargs tlmgr --repository "$R
   exit 1
 }
 cp "$HERE/texmf.cnf" "$PREFIX/$RELEASE/texmf.cnf"
+export TEXMFCACHE="$PREFIX/$RELEASE/texmf-var"
 luaotfload-tool --update >/dev/null
+# Warm luaotfload's font caches into the system tree, which is still writable
+# here; sandboxed jobs see it read-only and would otherwise re-parse every
+# font on every compile.
+cp "$HERE/warmup.tex" "$WORK/warmup.tex"
+(cd "$WORK" && lualatex -interaction=nonstopmode -halt-on-error warmup.tex >"$WORK/warmup.log" 2>&1) || {
+  tail -30 "$WORK/warmup.log" >&2
+  exit 1
+}
 echo "$BIN"
