@@ -37,7 +37,14 @@ export const InkColor = z.enum([
 
 export const BlockStatus = z.enum(['ready', 'check', 'image', 'excluded']);
 
-export const ExcludedReason = z.enum(['crossedOut', 'teacher', 'personalData', 'projectedSource']);
+/** `interfaceText`: app menus or toolbars that slipped into a capture, filtered by structuring. */
+export const ExcludedReason = z.enum([
+  'crossedOut',
+  'teacher',
+  'personalData',
+  'projectedSource',
+  'interfaceText',
+]);
 
 export const Provenance = z.object({
   source: z.enum(['board', 'capture', 'import', 'typed', 'tool']),

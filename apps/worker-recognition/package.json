@@ -1,0 +1,28 @@
+{
+  "name": "@chalkline/worker-recognition",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Recognition pipeline: Mathpix results to IR blocks, AI structuring behind guards, heuristic fallback, compile probes.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@chalkline/conventions": "workspace:*",
+    "@chalkline/ink": "workspace:*",
+    "@chalkline/ir": "workspace:*",
+    "@chalkline/latex": "workspace:*",
+    "@chalkline/presets": "workspace:*",
+    "@chalkline/providers": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@chalkline/lesson": "workspace:*",
+    "@chalkline/worker-compile": "workspace:*",
+    "@types/node": "^24.19.2"
+  }
+}

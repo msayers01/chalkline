@@ -55,6 +55,40 @@ importers:
         specifier: ^24.19.2
         version: 24.19.2
 
+  apps/worker-recognition:
+    dependencies:
+      '@chalkline/conventions':
+        specifier: workspace:*
+        version: link:../../packages/conventions
+      '@chalkline/ink':
+        specifier: workspace:*
+        version: link:../../packages/ink
+      '@chalkline/ir':
+        specifier: workspace:*
+        version: link:../../packages/ir
+      '@chalkline/latex':
+        specifier: workspace:*
+        version: link:../../packages/latex
+      '@chalkline/presets':
+        specifier: workspace:*
+        version: link:../../packages/presets
+      '@chalkline/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@chalkline/lesson':
+        specifier: workspace:*
+        version: link:../../packages/lesson
+      '@chalkline/worker-compile':
+        specifier: workspace:*
+        version: link:../worker-compile
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+
   packages/conventions:
     dependencies:
       '@chalkline/ir':
@@ -165,6 +199,9 @@ importers:
       '@chalkline/worker-compile':
         specifier: workspace:*
         version: link:../../apps/worker-compile
+      '@chalkline/worker-recognition':
+        specifier: workspace:*
+        version: link:../../apps/worker-recognition
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
@@ -196,9 +233,15 @@ importers:
       '@chalkline/presets':
         specifier: workspace:*
         version: link:../../packages/presets
+      '@chalkline/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
       '@chalkline/worker-compile':
         specifier: workspace:*
         version: link:../../apps/worker-compile
+      '@chalkline/worker-recognition':
+        specifier: workspace:*
+        version: link:../../apps/worker-recognition
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
