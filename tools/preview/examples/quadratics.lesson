@@ -1,0 +1,73 @@
+---
+title: Solving quadratic equations
+course: Algebra II, Period 3
+teacher: Ms. Rivera
+date: 2026-10-20
+unit: Unit 4: Quadratics
+lang: en
+---
+
+# Quadratic equations
+
+Today we solve equations of the form $ax^2 + bx + c = 0$ where $a \neq 0$.
+
+::: definition Quadratic equation
+A **quadratic equation** is a polynomial equation of degree 2.
+:::
+
+::: theorem Quadratic formula {key}
+$$ x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} $$
+:::
+
+The number $\Delta = b^2 - 4ac$ is the *discriminant*. It tells us how many real roots there are.
+
+| $\Delta$ | real roots |
+|---|---|
+| $\Delta > 0$ | two |
+| $\Delta = 0$ | one |
+| $\Delta < 0$ | none |
+
+::: example
+Solve $x^2 - 5x + 6 = 0$.
+Solution:
+$$
+x^2 - 5x + 6 = 0
+(x - 2)(x - 3) = 0
+$$
+So $x = 2$ or $x = 3$.
+:::
+
+::: announcement
+Quiz on Friday: sections 4.1 to 4.3. Bring a calculator!
+:::
+
+# Practice
+
+::: problem
+Solve by factoring.
+(a) $x^2 + 7x + 12 = 0$
+Solution: $$ (x + 3)(x + 4) = 0 $$
+Answer: $x = -3$ or $x = -4$
+(b) $x^2 - 9 = 0$
+Solution: $$ (x - 3)(x + 3) = 0 $$
+Answer: $x = \pm 3$
+:::
+
+::: problem 5 points
+Use the quadratic formula to solve $2x^2 - 4x - 1 = 0$.
+Solution:
+$$
+x = \frac{4 \pm \sqrt{16 + 8}}{4}
+x = \frac{2 \pm \sqrt{6}}{2}
+$$
+Answer: $x = 1 \pm \frac{\sqrt{6}}{2}$
+:::
+
+::: problem
+A ball is thrown upward; its height in metres after $t$ seconds is $h(t) = -4.9t^2 + 19.6t$. When does it land?
+Solution:
+Set $h(t) = 0$: $t(-4.9t + 19.6) = 0$, so $t = 0$ or $t = 4$.
+Answer: after $4$ seconds
+:::
+
+$$ x = 7 $$ {crossed-out}

@@ -14,7 +14,8 @@
     "format:check": "prettier --check .",
     "test": "turbo run test",
     "test:snap": "turbo run test:snap --",
-    "compile-matrix": "pnpm --filter @chalkline/compile-matrix run matrix"
+    "compile-matrix": "pnpm --filter @chalkline/compile-matrix run matrix",
+    "preview": "pnpm --filter @chalkline/preview run preview"
   },
   "devDependencies": {
     "@chalkline/eslint-plugin": "workspace:*",

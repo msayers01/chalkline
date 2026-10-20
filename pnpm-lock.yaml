@@ -98,6 +98,16 @@ importers:
         specifier: ^1.8.4
         version: 1.8.4
 
+  packages/lesson:
+    dependencies:
+      '@chalkline/ir':
+        specifier: workspace:*
+        version: link:../ir
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+
   packages/presets:
     dependencies:
       '@chalkline/conventions':
@@ -140,6 +150,31 @@ importers:
       '@typescript-eslint/rule-tester':
         specifier: ^8.72.0
         version: 8.72.0(eslint@10.13.0)(typescript@6.0.3)
+
+  tools/preview:
+    dependencies:
+      '@chalkline/conventions':
+        specifier: workspace:*
+        version: link:../../packages/conventions
+      '@chalkline/ir':
+        specifier: workspace:*
+        version: link:../../packages/ir
+      '@chalkline/latex':
+        specifier: workspace:*
+        version: link:../../packages/latex
+      '@chalkline/lesson':
+        specifier: workspace:*
+        version: link:../../packages/lesson
+      '@chalkline/presets':
+        specifier: workspace:*
+        version: link:../../packages/presets
+      '@chalkline/worker-compile':
+        specifier: workspace:*
+        version: link:../../apps/worker-compile
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
 
 packages:
 

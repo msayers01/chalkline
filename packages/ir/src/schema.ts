@@ -60,7 +60,11 @@ export const Decided = z.object({
   pinned: z.boolean(),
 });
 
-export const BlockFlag = z.enum(['personalName']);
+/**
+ * `personalName`: structuring found a name that must not be published without approval.
+ * `keyResult`: the teacher's "Key result" quick tag (Guided Notes blanks these).
+ */
+export const BlockFlag = z.enum(['personalName', 'keyResult']);
 
 const blockBaseShape = {
   id: Id,
