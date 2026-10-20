@@ -217,6 +217,18 @@ Each new math block is first checked by a fast parser in the worker. New blocks 
 | Both recognizers unavailable | Region becomes an Image block; the teacher is told why in review |
 | Anthropic API unavailable | Heuristic structurer; figure alt text left for the teacher, flagged |
 
+### Implementation notes (v0.2)
+
+Decisions taken while building the pipeline in `apps/worker-recognition`; they refine the sections above.
+
+- **Two entry points.** `recognizeRegions` runs stages 1 and 2 once per region (splitting regions over the 512 KB request limit first) and returns leaf blocks to store with the region. `structureSession` takes every stored block of the session, probes the new ones, structures them and builds the document. Probing comes first, so a block that fails is already an image when it is placed.
+- **Post-processing.** Mathpix Markdown is split into lines; a line holding only one math expression is display math whatever its delimiters, consecutive math lines form one derivation, and `aligned` or single-column `array` output is split into lines (the renderer re-aligns). Each region yields one or more leaf blocks with ids derived from the region id, so a retried job writes the same blocks. Status comes from `confidence_rate` (per character) rather than `confidence` (whole output exactly right, which falls with length).
+- **Model input and output.** Blocks are sent as JSON data with short local ids (`b1`, `b2`, ...), kind, clipped content, page, box, time, tags and, for pinned blocks, their placement. The output lists every id once with a role (`content`, `heading`, `problem`, `part`, `solution`, `answer`, a callout kind, `figure`) and a parent, or excludes it as `crossedOut`, `projectedSource` or `interfaceText`; `personalName` is a boolean per block. Allowed parents are fixed per role, which also rules out cycles.
+- **Guards, then normalization.** Hard checks (ids exactly once, known ids, allowed parents, every top-level block in one section) reject a response. Teacher decisions are then applied rather than checked: tags override roles, pinned blocks keep their placement, personal names are held back as `personalData` exclusions, a role that does not fit its block becomes content, and a parent keeps one solution and one answer. The heuristic structurer's output goes through the same steps.
+- **Headings.** A heading the teacher wrote becomes its section's title and the section takes the heading block's id; the model's own titles are used only where there is no heading, as plain text of at most 80 characters.
+- **Document building.** Containers take ids derived from their first block, so passes are stable. Labels the presets print themselves ("3.", "(b)", "Solution:") are stripped and "(5 points)" becomes points. Excluded blocks stay in place, marked excluded. Teacher edits to blocks, teacher-set points, titles and exclusions, and top-level blocks the teacher typed carry over to the next pass.
+- **Not yet built:** the queue consumer and its retry policy, the vision backup recognizer, strike-through detection from recognizer line data, figure crops for the model (so no alt text yet), and protecting the order of blocks a teacher moved.
+
 ## Document model and LaTeX engine
 
 The IR is a typed tree of sections and blocks with full provenance; every output format is a pure function of the IR, a preset and resolved conventions.

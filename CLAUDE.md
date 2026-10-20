@@ -8,7 +8,7 @@ Design references (read before large changes):
 
 If code and these docs disagree, stop and ask; do not silently pick one. Keep this file in sync when commands, layout or invariants change.
 
-**Current state (v0.1, Foundations):** `packages/ir`, `packages/conventions`, `packages/latex`, `packages/presets`, `apps/worker-compile` (runner + toolchain only), `tools/eslint-plugin-chalkline` and `tools/compile-matrix` exist. Everything else in the layout below is planned. Decisions taken while building v0.1 (no babel, text font fallback, callouts without amsthm, select step in `ir`) are listed in `README.md`.
+**Current state (v0.2, Built-in Board pipeline in progress):** `packages/ir`, `conventions`, `latex`, `presets` (all nine), `lesson`, `ink` and `providers`; `apps/worker-compile` (runner + toolchain) and `apps/worker-recognition` (the four pipeline stages as library calls, no queue consumer yet); `tools/eslint-plugin-chalkline`, `tools/compile-matrix` and `tools/preview` exist. Everything else in the layout below is planned. Decisions taken while building (no babel, text font fallback, callouts without amsthm, select step in `ir`, local ids for the model, headings as section titles, derived container ids) are listed in `README.md`.
 
 ---
 
@@ -17,7 +17,7 @@ If code and these docs disagree, stop and ask; do not silently pick one. Keep th
 These protect the product's three promises: never lose content, never invent math, always compile. Breaking one is a bug even if tests pass.
 
 1. **The IR is the source of truth.** Never store, edit or diff LaTeX as primary data. LaTeX, HTML and DOCX are renderings of `packages/ir`. Teacher edits are IR patches.
-2. **Math comes only from the recognizer or the teacher.** The structuring model may return block ids, types, parent ids, order, section titles and figure alt text — nothing else. All of this is enforced in `apps/worker-recognition/src/structure/guards.ts`. Never widen the output schema to include math or free text without a design review.
+2. **Math comes only from the recognizer or the teacher.** The structuring model may return block ids, types, parent ids, order, section titles and figure alt text — nothing else. All of this is enforced in `apps/worker-recognition/src/structure/`: the output schema (`schema.ts`), the guard checks (`guards.ts`) and the teacher-decision overrides (`normalize.ts`). Never widen the output schema to include math or free text without a design review.
 3. **One path from content to LaTeX.** Text goes through `escapeText()` and math through `sanitizeMath()` (parse to AST → macro allowlist → convention transforms → serialize), both in `packages/latex/src/safe/`. No template literal may interpolate content directly; the ESLint rule `chalkline/no-raw-latex-interpolation` enforces this (LaTeX is built only with the `tex` tagged template over `SafeLatex` values; `safe/` itself and the plain-text `presets/src/labels.ts` are exempt). Never add `\input`, `\include`, `\write`, `\openin`, `\openout`, `\read`, `\csname`, `\catcode`, `\def`, `\let`, `\directlua` or `\usepackage` to the allowlist (`BANNED_MACROS` in `safe/allowlist.ts`; a test keeps the lists disjoint).
 4. **Always compile.** Every new math block is validated alone before it enters a document; failures become `ImageFallback` blocks. A compile failure on generated LaTeX in production is a page-worthy incident, not a user error.
 5. **Rendering is deterministic.** Same IR + preset + conventions ⇒ byte-identical `.tex`. No timestamps, random ids, `Date.now()`, or hash-ordered iteration in renderers.
@@ -43,7 +43,11 @@ apps/
     src/review/           Review screen, MathLive editor, preset switcher
     src/workers/          capture.worker.ts, ink.worker.ts, sync.worker.ts
   api/                    Fastify REST + SSE, share pages, export orchestration
-  worker-recognition/     Mathpix + Anthropic calls, post-processing, structuring, validation probes
+  worker-recognition/     Recognition pipeline: pipeline.ts (recognizeRegions, structureSession)
+    src/postprocess/      Mathpix Markdown → leaf blocks: split, repair, sanitize, status by confidence
+    src/structure/        schema, prompt, guards, normalize (tags, pins), heuristic, apply (IR builder)
+    src/validate/         compile probe with bisection
+    src/simulate.ts       lesson → simulated board session, recognizer and oracle model, for tests
   worker-compile/         Dockerfile (pinned TeX Live), latexmk/LuaLaTeX runner, pandoc, rsvg
     toolchain/            install-texlive.sh, texlive-packages.txt, texmf.cnf, install-verapdf.sh
 packages/
@@ -51,6 +55,7 @@ packages/
   latex/                  IR → .tex renderer, safe/ (escape + sanitizer), source maps, overflow fixes
   presets/                Built-in presets, preamble modules, package allowlist
   conventions/            Convention resolution chain + math AST transforms
+  lesson/                 Plain-text lesson format (README.md has the syntax) → IR
   html/                   IR → HTML (preview + share pages, MathJax 4)
   docx/                   IR → Pandoc JSON
   capture/                Pure frame-analysis algorithms (diff, stability, alignment, ink map, regions)
@@ -62,7 +67,8 @@ packages/
 infra/                    AWS CDK stacks (us-east-2, eu-central-1)
 corpus/                   Lesson corpus manifest + ground truth (media lives in S3)
 tools/replay/             Headless replay harness and scoring
-tools/compile-matrix/     pnpm compile-matrix: presets × fixtures × conventions, allowlist and random docs, veraPDF
+tools/compile-matrix/     pnpm compile-matrix: presets × fixtures × conventions, allowlist, random and board-pipeline docs, veraPDF
+tools/preview/            pnpm preview: lesson file → .tex/PDF per preset, optionally through the board pipeline
 tools/eslint-plugin-chalkline/  chalkline/no-raw-latex-interpolation
 ```
 
@@ -72,7 +78,7 @@ Pure logic belongs in `packages/*` so it can be tested in Node without a browser
 
 ## Commands
 
-Available in v0.1: `install`, `typecheck`, `lint`, `format`, `test`, `test:snap`, `compile-matrix`. The rest are planned with the packages they belong to.
+Available now: `install`, `typecheck`, `lint`, `format`, `test`, `test:snap`, `compile-matrix`, `preview`. The rest are planned with the packages they belong to.
 
 ```bash
 pnpm install
@@ -88,6 +94,7 @@ pnpm test:integration       # Testcontainers: API, queue, workers, RLS attack te
 pnpm test:e2e               # Playwright on Edge + Chrome
 pnpm compile-matrix         # every preset × fixture × key conventions in the compile image + veraPDF UA-2
 pnpm compile-matrix --quick # default conventions only; TEXLIVE_BIN / VERAPDF override tool paths
+pnpm preview <lesson> [--preset set|all|ids] [--set key=value] [--board heuristic|ideal|claude] [--no-pdf]
 pnpm corpus:score --subset smoke   # ~15 lessons, a few minutes; use --subset full before releases
 
 pnpm db:migrate
