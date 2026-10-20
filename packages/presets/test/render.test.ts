@@ -171,12 +171,14 @@ describe('content safety', () => {
   it('reports text the fonts may not cover instead of dropping it silently', () => {
     const b = new DocBuilder('01JEMJ00000000000000');
     const para = b.p('Great work 😀 数学');
+    const math = b.math('x = 数');
     const doc = b.doc(
       { title: 'T', course: 'C', teacher: 'X', date: '2026-01-01', lang: 'en' },
-      b.section(undefined, para),
+      b.section(undefined, para, math),
     );
     const { issues, tex } = renderWithPreset(doc, 'lecture-notes');
     expect(issues).toContainEqual({ blockId: para.id, code: 'unsupportedCharacter' });
+    expect(issues).toContainEqual({ blockId: math.id, code: 'unsupportedCharacter' });
     expect(tex).toContain('😀 数学');
   });
 });

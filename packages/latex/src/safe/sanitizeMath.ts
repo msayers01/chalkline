@@ -374,6 +374,12 @@ function emitList(nodes: Ast.Node[], ctx: Ctx, out: Emitter): void {
       }
     }
 
+    // A \left ... \right pair cannot span alignment cells or rows.
+    const endsCell =
+      (node.type === 'string' && node.content.includes('&')) ||
+      (node.type === 'macro' && node.content === '\\');
+    if (endsCell && leftDepth > 0) throw new Reject({ code: 'unbalancedDelimiters' });
+
     switch (node.type) {
       case 'string':
         emitString(node.content, ctx, out);

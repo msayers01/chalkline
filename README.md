@@ -55,3 +55,10 @@ These refine the design documents; they are recorded in the architecture documen
 4. **The select step lives in `packages/ir`** (`selectView`), so the LaTeX, HTML and Word renderers share one view tree.
 5. **Derivative notation is suggestion-only.** Converting between prime and Leibniz notation needs the independent variable, which the board rarely states unambiguously.
 6. **`\square` and `\blacksquare` are not allowlisted:** unicode-math does not define them (the compile matrix caught it).
+
+## Known gaps
+
+- **Compile time.** A 3-page handout takes about 11 s in the sandbox with Latin Modern and about 17 s with Fira Sans in large print (4-core container, warm font caches). latexmk runs several LuaLaTeX passes for tagging and page references. The architecture targets p95 under 15 s for 10 pages, so the worker needs work here: a warm pool, a persistent per-job cache of `.aux` files between edits of the same document, and fewer passes.
+- **Not run in this environment:** the Docker image build and the GitHub Actions workflow. The toolchain scripts they call were run end to end here (fresh TeX Live 2026 install, compile, veraPDF), but the image and CI need a first green run.
+- **Units convention** (`siunitx`) is in the schema but no transform reads it yet; `equationNumbers: 'referenced'` behaves like `none` until the IR has references; the `logo` header field is ignored until workspaces carry a logo asset.
+- **Image assets** are only referenced: the compile matrix uses grey placeholders. Raster cleanup, SVG-to-PDF for board ink and standalone plot compilation are not built.

@@ -163,6 +163,13 @@ describe('sanitizeMath', () => {
     expect(code('x \\right)')).toBe('unbalancedDelimiters');
     expect(code('\\frac{\\left( a}{b\\right)}')).toBe('unbalancedDelimiters');
     expect(code('\\left x \\right)')).toBe('invalidDelimiter');
+    expect(code('\\begin{pmatrix}\\left( a & b \\right)\\end{pmatrix}')).toBe(
+      'unbalancedDelimiters',
+    );
+    expect(code('\\begin{cases}\\left( a \\\\ b \\right)\\end{cases}')).toBe(
+      'unbalancedDelimiters',
+    );
+    expect(code('\\begin{pmatrix}\\left( a \\right) & b\\end{pmatrix}')).toBe('ok');
     expect(code('a & b')).toBe('misplacedAlignment');
     expect(code('\\begin{pmatrix}{a&b}\\end{pmatrix}')).toBe('misplacedAlignment');
     expect(code('a \\\\ b')).toBe('misplacedLineBreak');

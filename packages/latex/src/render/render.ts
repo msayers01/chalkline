@@ -365,6 +365,7 @@ class Renderer {
       this.issues.push({ blockId, code: 'mathRejected', reason: result.error.code });
       return undefined;
     }
+    this.checkText(blockId, latex);
     for (const note of result.applied) this.applied.push({ blockId, ...note });
     for (const note of result.suggestions) this.suggestions.push({ blockId, ...note });
     return { latex: result.latex, aligned: result.aligned };
