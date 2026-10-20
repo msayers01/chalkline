@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { availableParallelism } from 'node:os';
 import { basename, dirname, extname, join } from 'node:path';
 import { Conventions, PartialConventions, type TransformNote } from '@chalkline/conventions';
 import type { Doc } from '@chalkline/ir';
@@ -110,8 +111,10 @@ export async function previewLesson(options: PreviewOptions): Promise<PreviewRes
   const sandbox = bubblewrapAvailable() ? 'bwrap' : 'none';
 
   // Presets compile in parallel; each run is single-threaded.
-  const outcomes = await Promise.all(
-    options.presets.map(async (preset): Promise<PresetOutcome> => {
+  const outcomes = await pool(
+    options.presets,
+    Math.max(1, availableParallelism()),
+    async (preset): Promise<PresetOutcome> => {
       const rendering = renderWithPreset(parsed.doc, preset, { teacher: options.settings });
       const texPath = join(outDir, `${preset}.tex`);
       await writeFile(texPath, rendering.tex);
@@ -138,7 +141,7 @@ export async function previewLesson(options: PreviewOptions): Promise<PreviewRes
         }
       }
       return outcome;
-    }),
+    },
   );
   return { ok: true, outDir, outcomes, sandbox };
 }
@@ -219,4 +222,23 @@ function allowedValues(key: string): string[] | undefined {
   return options.map((o) =>
     typeof o === 'object' && o !== null && 'value' in o ? String(o.value) : String(o),
   );
+}
+
+/** Runs `fn` over `items` with at most `size` in flight, keeping input order. */
+async function pool<T, R>(
+  items: readonly T[],
+  size: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array<R>(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(size, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        results[i] = await fn(items[i] as T);
+      }
+    }),
+  );
+  return results;
 }

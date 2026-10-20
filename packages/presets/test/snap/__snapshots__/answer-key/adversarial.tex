@@ -1,4 +1,4 @@
-% Chalkline handout: Answer Key (preset answer-key v1).
+% Chalkline handout: Answer Key (preset answer-key v2).
 % Document 01JAD000000000000000000012, version 1.
 % Compile with LuaLaTeX, TeX Live 2025 or later: latexmk -lualatex main.tex
 \DocumentMetadata{lang=fr, pdfversion=2.0, pdfstandard=ua-2, tagging=on, tagging-setup={math/setup=mathml-SE}}
@@ -31,9 +31,14 @@
 \renewcommand{\headrulewidth}{0.4pt}
 \NewDocumentCommand{\clheader}{mm}{\fancyhead[L]{\small #1}\fancyhead[R]{\small #2}}
 \NewDocumentCommand{\clfooter}{m}{\fancyfoot[C]{\small #1}}
+\newif\ifcltitled
 \NewDocumentCommand{\cltitle}{mm}{%
-  \title{#1}\author{#2}\date{}%
-  \maketitle\thispagestyle{fancy}\vspace{-2em}}
+  \ifcltitled
+    \begin{center}{\Large #1\par}\smallskip{#2\par}\end{center}%
+  \else
+    \title{#1}\author{#2}\date{}%
+    \maketitle\thispagestyle{fancy}\vspace{-2em}\global\cltitledtrue
+  \fi}
 \NewDocumentCommand{\clquizheader}{mmm}{%
   \par\noindent #1: \rule{6cm}{0.4pt}\hfill #2: \rule{3cm}{0.4pt}\hfill #3: \rule{2cm}{0.4pt}\par\bigskip}
 \NewDocumentEnvironment{cldefinition}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
@@ -48,6 +53,10 @@
 \NewDocumentCommand{\clanswerboxed}{mm}{\par\smallskip\noindent\textit{#1:}\ \fbox{#2}\par}
 \NewDocumentCommand{\clanswerspace}{m}{\par\vspace{#1\baselineskip}}
 \NewDocumentCommand{\clplaceholder}{m}{\fbox{\textit{#1}}}
+\NewDocumentCommand{\clblank}{m}{\par\noindent\fbox{\parbox[t][#1\baselineskip][t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\mbox{}}}\par}
+\NewDocumentCommand{\clcutline}{}{\par\vspace{1.5em}\noindent\makebox[\linewidth]{\dotfill}\par\vspace{1.5em}}
+\NewDocumentEnvironment{clkeep}{}{\par\noindent\begin{minipage}{\linewidth}\setlength{\parskip}{0.5\baselineskip}}{\end{minipage}\par}
+\NewDocumentEnvironment{clcolumns}{}{}{}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.5\baselineskip}
 \usepackage{hyperref}

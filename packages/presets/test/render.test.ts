@@ -137,8 +137,9 @@ describe('teacher edits survive preset switches', () => {
     });
     if (!edited.ok) throw new Error('patch failed');
     expect(findBlock(edited.doc, math.id)?.block.decided.pinned).toBe(true);
-    for (const preset of presets)
+    for (const preset of presets.filter((p) => BUILT_IN_PRESETS[p].rules.problems)) {
       expect(renderWithPreset(edited.doc, preset).tex).toContain('3x^{2} = 48');
+    }
   });
 });
 

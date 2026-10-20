@@ -20,8 +20,8 @@ import type {
 export type StructureRules = {
   /** Callout kinds to keep. */
   callouts: readonly CalloutKind[];
-  /** Keep top-level paragraphs, display math, figures, tables, lists and image fallbacks. */
-  content: boolean;
+  /** Top-level content block types to keep (paragraphs, display math, figures, ...). */
+  content: readonly ContentBlock['type'][];
   /** Keep problems at all. */
   problems: boolean;
   /**
@@ -36,10 +36,26 @@ export type StructureRules = {
   standaloneSolutions: boolean;
   /** Reserve writing space after problems that show no solution. */
   answerSpace: { factor: number; minLines: number; maxLines: number } | null;
-  /** Keep only the last N problems (Exit Ticket). */
-  lastProblems?: number;
+  /**
+   * Keep only the last problems (Exit Ticket): up to `max` of them, as many
+   * as fit an estimated `maxLines` including writing space, and at least one.
+   */
+  lastProblems?: { max: number; maxLines: number };
+  /** Print section titles (default true). */
+  sectionTitles?: boolean;
+  /** `board`: blocks in the order they were written (page, then time), as on the board. */
+  order?: 'document' | 'board';
   numbering: 'continuous' | 'restartEachSection';
 };
+
+export const ALL_CONTENT: readonly ContentBlock['type'][] = [
+  'paragraph',
+  'displayMath',
+  'figure',
+  'table',
+  'list',
+  'imageFallback',
+];
 
 export type ViewPart = {
   part: ProblemPart;
@@ -71,10 +87,10 @@ const included = <T extends { status: string }>(b: T | undefined): b is T =>
 
 export function selectView(doc: Doc, rules: StructureRules): ViewDoc {
   let number = 0;
-  const keepProblemIds =
-    rules.lastProblems !== undefined ? lastProblemIds(doc, rules.lastProblems) : undefined;
+  const keepProblemIds = rules.lastProblems !== undefined ? lastProblemIds(doc, rules) : undefined;
 
-  const sections: ViewSection[] = doc.sections.map((section) => {
+  const ordered = rules.order === 'board' ? boardOrder(doc.sections) : doc.sections;
+  const sections: ViewSection[] = ordered.map((section) => {
     if (rules.numbering === 'restartEachSection') number = 0;
     const blocks: ViewBlock[] = [];
     for (const block of section.blocks) {
@@ -82,11 +98,8 @@ export function selectView(doc: Doc, rules: StructureRules): ViewDoc {
       const view = selectBlock(block, rules, keepProblemIds, () => (number += 1));
       if (view) blocks.push(view);
     }
-    return {
-      id: section.id,
-      ...(section.title !== undefined ? { title: section.title } : {}),
-      blocks,
-    };
+    const title = rules.sectionTitles === false ? undefined : section.title;
+    return { id: section.id, ...(title !== undefined ? { title } : {}), blocks };
   });
 
   return {
@@ -136,7 +149,7 @@ function selectBlock(
         ? { kind: 'solution', block: filterSolution(block) }
         : undefined;
     default:
-      return rules.content ? { kind: 'content', block } : undefined;
+      return rules.content.includes(block.type) ? { kind: 'content', block } : undefined;
   }
 }
 
@@ -182,7 +195,7 @@ export function answerLines(
 }
 
 /** Deterministic height estimate in text lines; display math counts double. */
-function estimateLines(block: ContentBlock): number {
+export function estimateLines(block: ContentBlock): number {
   switch (block.type) {
     case 'displayMath':
       return block.lines.length * 2;
@@ -203,9 +216,53 @@ function estimateLines(block: ContentBlock): number {
   }
 }
 
-function lastProblemIds(doc: Doc, count: number): Set<string> {
-  const ids = doc.sections.flatMap((s) =>
-    s.blocks.filter((b) => b.type === 'problem' && included(b)).map((b) => b.id),
+function lastProblemIds(doc: Doc, rules: StructureRules): Set<string> {
+  const limit = rules.lastProblems ?? { max: Infinity, maxLines: Infinity };
+  const problems = doc.sections.flatMap((s) =>
+    s.blocks.filter((b): b is Problem => b.type === 'problem' && included(b)),
   );
-  return new Set(ids.slice(Math.max(0, ids.length - count)));
+  const kept: string[] = [];
+  let lines = 0;
+  for (const problem of [...problems].reverse()) {
+    if (kept.length >= limit.max) break;
+    const cost = problemLines(problem, rules);
+    if (kept.length > 0 && lines + cost > limit.maxLines) break;
+    kept.push(problem.id);
+    lines += cost;
+  }
+  return new Set(kept);
+}
+
+/** Estimated height of a problem with its writing space, for fitting problems into a fixed area. */
+function problemLines(problem: Problem, rules: StructureRules): number {
+  const prompt = (blocks: ContentBlock[]) =>
+    blocks.filter(included).reduce((n, b) => n + estimateLines(b), 0);
+  const space = (solution: Solution | undefined) =>
+    rules.answerSpace ? answerLines(solution, rules.answerSpace) : 0;
+  const parts = problem.parts.filter(included);
+  const body = parts.length
+    ? parts.reduce((n, part) => n + prompt(part.prompt) + space(part.solution), 0)
+    : space(problem.solution);
+  return 2 + prompt(problem.prompt) + body;
+}
+const written = (b: Block) => [b.provenance.page, b.provenance.t0] as const;
+
+function compareWritten(a: Block, b: Block): number {
+  const [pa, ta] = written(a);
+  const [pb, tb] = written(b);
+  return pa - pb || ta - tb;
+}
+
+/** Sections and their blocks in writing order. Array.prototype.sort is stable, so ties keep document order. */
+function boardOrder(sections: Doc['sections']): Doc['sections'] {
+  const sorted = sections.map((s) => ({ ...s, blocks: [...s.blocks].sort(compareWritten) }));
+  return sorted
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => {
+      const fa = a.s.blocks[0];
+      const fb = b.s.blocks[0];
+      if (!fa || !fb) return fa ? -1 : fb ? 1 : a.i - b.i;
+      return compareWritten(fa, fb) || a.i - b.i;
+    })
+    .map(({ s }) => s);
 }

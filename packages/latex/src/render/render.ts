@@ -4,7 +4,9 @@ import {
   type MathTransform,
   type TransformNote,
 } from '@chalkline/conventions';
+import { estimateLines } from '@chalkline/ir';
 import type {
+  AnyBlock,
   Answer,
   Callout,
   ContentBlock,
@@ -109,6 +111,28 @@ class Writer {
     this.sourceMap.push({ blockId: id, startLine, endLine: this.lineCount });
   }
 
+  mark(): { chunk: number; line: number; entries: number } {
+    return { chunk: this.chunks.length, line: this.lineCount, entries: this.sourceMap.length };
+  }
+
+  /** Writes the output between two marks again, with its source map entries shifted to the copy. */
+  repeat(
+    from: { chunk: number; line: number; entries: number },
+    to: { chunk: number; line: number; entries: number },
+  ): void {
+    const shift = this.lineCount - from.line;
+    const chunks = this.chunks.slice(from.chunk, to.chunk);
+    const entries = this.sourceMap.slice(from.entries, to.entries);
+    for (const chunk of chunks) {
+      // Blank chunks too: they are lines, and the shift counts them.
+      this.chunks.push(chunk);
+      this.lineCount += 1 + (chunk.match(/\n/g)?.length ?? 0);
+    }
+    for (const e of entries) {
+      this.sourceMap.push({ ...e, startLine: e.startLine + shift, endLine: e.endLine + shift });
+    }
+  }
+
   toString(): SafeLatex {
     return joinLatex(this.chunks, NEWLINE);
   }
@@ -154,6 +178,7 @@ class Renderer {
     w.line(tex`\clfooter{${footer}}`);
     w.blank();
     w.line(tex`\begin{document}`);
+    const copy = w.mark();
     w.line(tex`\cltitle{${escapeText(meta.title)}}{${this.details(view)}}`);
     if (template.titleBlock === 'quiz') {
       w.line(
@@ -161,6 +186,8 @@ class Renderer {
       );
     }
 
+    const columns = template.layout.columns === 2;
+    if (columns) w.line(tex`\begin{clcolumns}`);
     for (const section of view.sections) {
       w.blank();
       if (section.title !== undefined) w.line(tex`\section*{${escapeText(section.title)}}`);
@@ -168,6 +195,14 @@ class Renderer {
         w.blank();
         this.viewBlock(block);
       }
+    }
+    if (columns) w.line(tex`\end{clcolumns}`);
+
+    if (template.layout.copies === 2) {
+      const end = w.mark();
+      w.blank();
+      w.line(tex`\clcutline`);
+      w.repeat(copy, end);
     }
 
     w.blank();
@@ -218,6 +253,8 @@ class Renderer {
             view.block.points !== undefined
               ? escapeText(this.labels.points(view.block.points))
               : EMPTY;
+          const keep = this.template.layout.keepProblemsTogether;
+          if (keep) this.w.line(tex`\begin{clkeep}`);
           this.w.line(tex`\begin{clproblem}{${texInt(view.number)}}{${points}}`);
           this.contents(view.block.prompt);
           if (view.parts.length > 0) {
@@ -227,6 +264,7 @@ class Renderer {
           }
           this.work(view.solution, view.answer, view.answerLines);
           this.w.line(tex`\end{clproblem}`);
+          if (keep) this.w.line(tex`\end{clkeep}`);
         });
         return;
       case 'callout':
@@ -280,8 +318,13 @@ class Renderer {
       const label = escapeText(this.labels[callout.kind]);
       const title = callout.title !== undefined ? escapeText(callout.title) : EMPTY;
       this.w.line(tex`\begin{${env}}{${label}}{${title}}`);
-      this.contents(callout.body);
-      if (solution) this.solution(solution);
+      if (this.blanked(callout)) {
+        const lines = callout.body.reduce((n, b) => n + estimateLines(b), 0);
+        this.w.line(tex`\clblank{${texInt(Math.max(2, lines))}}`);
+      } else {
+        this.contents(callout.body);
+        if (solution) this.solution(solution);
+      }
       this.w.line(tex`\end{${env}}`);
     });
   }
@@ -290,8 +333,17 @@ class Renderer {
     for (const block of blocks) this.content(block);
   }
 
+  /** Guided Notes: the teacher's key results become writing space. */
+  private blanked(block: AnyBlock): boolean {
+    return this.template.layout.blankKeyResults && (block.flags?.includes('keyResult') ?? false);
+  }
+
   private content(block: ContentBlock): void {
     this.w.block(block.id, () => {
+      if (this.blanked(block)) {
+        this.w.line(tex`\clblank{${texInt(Math.max(2, estimateLines(block)))}}`);
+        return;
+      }
       switch (block.type) {
         case 'paragraph':
           this.paragraph(block);

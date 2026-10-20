@@ -6,5 +6,5 @@ export type { BlockVisit } from './walk.js';
 export { Actor, Patch, PatchOp, applyPatch } from './patch.js';
 export type { PatchError, PatchResult } from './patch.js';
 export { parseDoc, safeParseDoc } from './parse.js';
-export { answerLines, selectView } from './view.js';
+export { ALL_CONTENT, answerLines, estimateLines, selectView } from './view.js';
 export type { StructureRules, ViewBlock, ViewDoc, ViewPart, ViewSection } from './view.js';

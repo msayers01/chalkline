@@ -1,0 +1,122 @@
+% Chalkline handout: Study Sheet (preset study-sheet v1).
+% Document 01JCA000000000000000000017, version 1.
+% Compile with LuaLaTeX, TeX Live 2025 or later: latexmk -lualatex main.tex
+\DocumentMetadata{lang=es, pdfversion=2.0, pdfstandard=ua-2, tagging=on, tagging-setup={math/setup=mathml-SE}}
+\documentclass[10pt]{article}
+\usepackage[letterpaper,margin=1in,headheight=15pt]{geometry}
+\usepackage{amsmath}
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\directlua{luaotfload.add_fallback("clfallback", {"Latin Modern Math:mode=node;", "file:FreeSerif.otf:mode=node;"})}
+\setmainfont{Latin Modern Roman}[RawFeature={fallback=clfallback}]
+\setmathfont{Latin Modern Math}
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\emergencystretch=3em
+\usepackage{xcolor}
+\definecolor{clBlue}{HTML}{1F4E9C}
+\definecolor{clRed}{HTML}{B3261E}
+\definecolor{clGreen}{HTML}{1E6B34}
+\definecolor{clOrange}{HTML}{A65200}
+\definecolor{clPurple}{HTML}{6B3FA0}
+\definecolor{clBrown}{HTML}{7A4A1E}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\NewDocumentCommand{\clheader}{mm}{\fancyhead[L]{\small #1}\fancyhead[R]{\small #2}}
+\NewDocumentCommand{\clfooter}{m}{\fancyfoot[C]{\small #1}}
+\newif\ifcltitled
+\NewDocumentCommand{\cltitle}{mm}{%
+  \ifcltitled
+    \begin{center}{\Large #1\par}\smallskip{#2\par}\end{center}%
+  \else
+    \title{#1}\author{#2}\date{}%
+    \maketitle\thispagestyle{fancy}\vspace{-2em}\global\cltitledtrue
+  \fi}
+\NewDocumentCommand{\clquizheader}{mmm}{%
+  \par\noindent #1: \rule{6cm}{0.4pt}\hfill #2: \rule{3cm}{0.4pt}\hfill #3: \rule{2cm}{0.4pt}\par\bigskip}
+\NewDocumentEnvironment{cldefinition}{mm}{\begin{tcolorbox}[colback=white,colframe=black!55,boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt]\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\end{tcolorbox}}
+\NewDocumentEnvironment{cltheorem}{mm}{\begin{tcolorbox}[colback=white,colframe=black!55,boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt]\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\end{tcolorbox}}
+\NewDocumentEnvironment{clnote}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clexample}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clannouncement}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clproblem}{mm}{\par\medskip\noindent\textbf{#1.}\IfBlankF{#2}{ \textit{(#2)}}\ \ignorespaces}{\par}
+\NewDocumentEnvironment{clparts}{}{\begin{enumerate}[label=(\alph*)]}{\end{enumerate}}
+\NewDocumentEnvironment{clsolution}{m}{\par\smallskip\noindent\textit{#1.}\ \ignorespaces}{\par\smallskip}
+\NewDocumentCommand{\clanswer}{mm}{\par\smallskip\noindent\textit{#1:}\ #2\par}
+\NewDocumentCommand{\clanswerboxed}{mm}{\par\smallskip\noindent\textit{#1:}\ \fbox{#2}\par}
+\NewDocumentCommand{\clanswerspace}{m}{\par\vspace{#1\baselineskip}}
+\NewDocumentCommand{\clplaceholder}{m}{\fbox{\textit{#1}}}
+\NewDocumentCommand{\clblank}{m}{\par\noindent\fbox{\parbox[t][#1\baselineskip][t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\mbox{}}}\par}
+\NewDocumentCommand{\clcutline}{}{\par\vspace{1.5em}\noindent\makebox[\linewidth]{\dotfill}\par\vspace{1.5em}}
+\NewDocumentEnvironment{clkeep}{}{\par\noindent\begin{minipage}{\linewidth}\setlength{\parskip}{0.5\baselineskip}}{\end{minipage}\par}
+\usepackage{multicol}
+\setlength{\columnsep}{1.5em}
+\NewDocumentEnvironment{clcolumns}{}{\begin{multicols}{2}\raggedright}{\end{multicols}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5\baselineskip}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\hypersetup{pdftitle={Derivadas e integrales — Hoja de repaso}, pdfdisplaydoctitle=true}
+\clheader{Cálculo I}{21 de octubre de 2026}
+\clfooter{Página \thepage\ de \pageref{LastPage}}
+
+\begin{document}
+\cltitle{Derivadas e integrales — Hoja de repaso}{Cálculo I · Ana Müller-Šimić · 21 de octubre de 2026}
+\begin{clcolumns}
+
+\section*{La derivada}
+
+% blk:01JCA000000000000000000002
+\[
+\frac{dy}{dx}= \lim_{h \to 0}\frac{f(x + h) - f(x)}{h}
+\]
+
+% blk:01JCA000000000000000000004
+\[
+\frac{d}{dx}x^{n} = n x^{n-1}
+\]
+
+% blk:01JCA000000000000000000006
+\[
+f'(x) = 3x^{2} \cdot 2
+\]
+
+% blk:01JCA00000000000000000000A
+\begin{cltheorem}{Teorema}{Regla de la cadena}
+% blk:01JCA000000000000000000008
+\[
+\frac{d}{dx}f(g(x)) = f'(g(x)) \cdot g'(x)
+\]
+\end{cltheorem}
+
+\section*{La integral}
+
+% blk:01JCA00000000000000000000H
+\[
+\int_{0}^{1} x^{2} dx = \frac{1}{3}
+\]
+
+% blk:01JCA00000000000000000000K
+\[
+\int_{0}^{\pi}\sin x \, dx = 2
+\]
+
+% blk:01JCA00000000000000000000N
+\[
+A = 3.14 \times r^{2}
+\]
+
+% blk:01JCA00000000000000000000Q
+\[
+f(x) = \begin{cases}x^{2}&x \geq 0 \\ -x&x < 0\end{cases}
+\]
+\end{clcolumns}
+
+\end{document}

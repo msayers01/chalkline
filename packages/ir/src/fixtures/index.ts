@@ -1,7 +1,7 @@
 import type { Doc } from '../types.js';
-import { DocBuilder, excluded } from './build.js';
+import { DocBuilder, excluded, keyResult } from './build.js';
 
-export { DocBuilder, excluded } from './build.js';
+export { DocBuilder, excluded, keyResult } from './build.js';
 
 /**
  * Hand-written lessons used by snapshot tests and the compile matrix. They are
@@ -32,9 +32,11 @@ export function quadraticsLesson(): Doc {
       ],
       { title: 'Quadratic equation' },
     ),
-    b.callout('theorem', [b.math('x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}')], {
-      title: 'Quadratic formula',
-    }),
+    keyResult(
+      b.callout('theorem', [b.math('x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}')], {
+        title: 'Quadratic formula',
+      }),
+    ),
     b.callout('example', [b.p('Solve ', m('x^2 - 5x + 6 = 0'), '.')], {
       solution: b.solution(
         b.math('x^2 - 5x + 6 = 0', '(x - 2)(x - 3) = 0'),
@@ -128,7 +130,7 @@ export function calculusLesson(): Doc {
   const derivative = b.section(
     'La derivada',
     b.math('\\frac{dy}{dx} = \\lim_{h \\to 0} \\frac{f(x + h) - f(x)}{h}'),
-    b.math('\\frac{d}{dx} x^n = n x^{n-1}'),
+    keyResult(b.math('\\frac{d}{dx} x^n = n x^{n-1}')),
     b.math("f'(x) = 3x^2 \\cdot 2"),
     b.callout('theorem', [b.math("\\frac{d}{dx} f(g(x)) = f'(g(x)) \\cdot g'(x)")], {
       title: 'Regla de la cadena',

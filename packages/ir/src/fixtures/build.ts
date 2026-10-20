@@ -182,3 +182,8 @@ export function excluded<T extends Block>(
 ): T {
   return { ...block, status: 'excluded', excludedReason: reason, statusBeforeExclusion: 'ready' };
 }
+
+/** Adds the teacher's "Key result" tag, which Guided Notes turns into a blank. */
+export function keyResult<T extends Block>(block: T): T {
+  return { ...block, flags: [...(block.flags ?? []), 'keyResult'] };
+}

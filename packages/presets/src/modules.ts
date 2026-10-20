@@ -11,6 +11,8 @@ import { joinLatex, tex, type SafeLatex } from '@chalkline/latex';
 export type ElementStyle = {
   /** Callout kinds drawn in a box; the rest are set as labelled paragraphs. */
   boxed: readonly CalloutKind[];
+  /** Body columns; two columns load multicol. */
+  columns: 1 | 2;
 };
 
 const NL = tex`
@@ -87,9 +89,15 @@ const headers = tex`\usepackage{fancyhdr}
 \NewDocumentCommand{\clheader}{mm}{\fancyhead[L]{\small #1}\fancyhead[R]{\small #2}}
 \NewDocumentCommand{\clfooter}{m}{\fancyfoot[C]{\small #1}}`;
 
-const title = tex`\NewDocumentCommand{\cltitle}{mm}{%
-  \title{#1}\author{#2}\date{}%
-  \maketitle\thispagestyle{fancy}\vspace{-2em}}
+// \maketitle works once per document; later titles (Exit Ticket copies) are set by hand.
+const title = tex`\newif\ifcltitled
+\NewDocumentCommand{\cltitle}{mm}{%
+  \ifcltitled
+    \begin{center}{\Large #1\par}\smallskip{#2\par}\end{center}%
+  \else
+    \title{#1}\author{#2}\date{}%
+    \maketitle\thispagestyle{fancy}\vspace{-2em}\global\cltitledtrue
+  \fi}
 \NewDocumentCommand{\clquizheader}{mmm}{%
   \par\noindent #1: \rule{6cm}{0.4pt}\hfill #2: \rule{3cm}{0.4pt}\hfill #3: \rule{2cm}{0.4pt}\par\bigskip}`;
 
@@ -120,8 +128,19 @@ function elements(style: ElementStyle): SafeLatex {
 \NewDocumentCommand{\clanswerboxed}{mm}{\par\smallskip\noindent\textit{#1:}\ \fbox{#2}\par}
 \NewDocumentCommand{\clanswerspace}{m}{\par\vspace{#1\baselineskip}}
 \NewDocumentCommand{\clplaceholder}{m}{\fbox{\textit{#1}}}
+\NewDocumentCommand{\clblank}{m}{\par\noindent\fbox{\parbox[t][#1\baselineskip][t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\mbox{}}}\par}
+\NewDocumentCommand{\clcutline}{}{\par\vspace{1.5em}\noindent\makebox[\linewidth]{\dotfill}\par\vspace{1.5em}}
+\NewDocumentEnvironment{clkeep}{}{\par\noindent\begin{minipage}{\linewidth}\setlength{\parskip}{0.5\baselineskip}}{\end{minipage}\par}
+${columns(style)}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.5\baselineskip}`;
+}
+
+function columns(style: ElementStyle): SafeLatex {
+  if (style.columns === 1) return tex`\NewDocumentEnvironment{clcolumns}{}{}{}`;
+  return tex`\usepackage{multicol}
+\setlength{\columnsep}{1.5em}
+\NewDocumentEnvironment{clcolumns}{}{\begin{multicols}{2}\raggedright}{\end{multicols}}`;
 }
 
 /** hyperref goes last; the tagging code loads its PDF management first. */

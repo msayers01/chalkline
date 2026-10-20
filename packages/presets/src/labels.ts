@@ -213,7 +213,7 @@ export function labelsFor(lang: Lang): Labels {
 }
 
 /** Title suffixes that tell a worksheet or key apart from the notes. */
-export const TITLE_SUFFIX: Record<'practice' | 'answerKey', Record<Lang, string>> = {
+export const TITLE_SUFFIX = {
   practice: { en: 'Practice', es: 'Práctica', fr: 'Exercices', de: 'Übungen', pt: 'Prática' },
   answerKey: {
     en: 'Answer Key',
@@ -222,7 +222,50 @@ export const TITLE_SUFFIX: Record<'practice' | 'answerKey', Record<Lang, string>
     de: 'Lösungen',
     pt: 'Gabarito',
   },
-};
+  guidedNotes: {
+    en: 'Guided Notes',
+    es: 'Apuntes guiados',
+    fr: 'Notes guidées',
+    de: 'Lückentext',
+    pt: 'Notas guiadas',
+  },
+  guidedNotesFilled: {
+    en: 'Guided Notes (filled)',
+    es: 'Apuntes guiados (completos)',
+    fr: 'Notes guidées (complétées)',
+    de: 'Lückentext (ausgefüllt)',
+    pt: 'Notas guiadas (preenchidas)',
+  },
+  workedExamples: {
+    en: 'Worked Examples',
+    es: 'Ejemplos resueltos',
+    fr: 'Exemples corrigés',
+    de: 'Musterlösungen',
+    pt: 'Exemplos resolvidos',
+  },
+  quiz: { en: 'Quiz', es: 'Prueba', fr: 'Interrogation', de: 'Test', pt: 'Teste' },
+  studySheet: {
+    en: 'Study Sheet',
+    es: 'Hoja de repaso',
+    fr: 'Fiche de révision',
+    de: 'Lernzettel',
+    pt: 'Folha de revisão',
+  },
+  exitTicket: {
+    en: 'Exit Ticket',
+    es: 'Ticket de salida',
+    fr: 'Billet de sortie',
+    de: 'Abschlusskarte',
+    pt: 'Bilhete de saída',
+  },
+  boardSnapshot: {
+    en: 'Board',
+    es: 'Pizarra',
+    fr: 'Tableau',
+    de: 'Tafelbild',
+    pt: 'Quadro',
+  },
+} as const satisfies Record<string, Record<Lang, string>>;
 
 /** The document title with a preset's suffix ("Solving quadratics — Answer Key"). Plain text; escaped by the renderer. */
 export function titleWithSuffix(

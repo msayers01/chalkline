@@ -37,6 +37,25 @@ export type LatexTemplate = {
   labels: Labels;
   /** `quiz` adds name, date and score lines under the title. */
   titleBlock: 'standard' | 'quiz';
+  layout: LatexLayout;
+};
+
+export type LatexLayout = {
+  /** Two-column body (Study Sheet). */
+  columns: 1 | 2;
+  /** Copies of the whole handout per sheet, separated by a cut line (Exit Ticket). */
+  copies: 1 | 2;
+  /** Never break a page inside a problem (Quiz). */
+  keepProblemsTogether: boolean;
+  /** Replace blocks the teacher tagged as key results with writing space (Guided Notes). */
+  blankKeyResults: boolean;
+};
+
+export const DEFAULT_LAYOUT: LatexLayout = {
+  columns: 1,
+  copies: 1,
+  keepProblemsTogether: false,
+  blankKeyResults: false,
 };
 
 /**
@@ -53,6 +72,8 @@ export const CONTRACT = {
     'clproblem', // {number}{points label}
     'clparts', // list of \item
     'clsolution', // {label}
+    'clkeep', // keeps its content on one page
+    'clcolumns', // the body in the preset's column layout
   ],
   commands: [
     'cltitle', // {title}{details}
@@ -63,5 +84,7 @@ export const CONTRACT = {
     'clanswerboxed', // {label}{content}
     'clanswerspace', // {lines}
     'clplaceholder', // {message}
+    'clblank', // {lines}: writing space in place of a key result
+    'clcutline', // between copies on one sheet
   ],
 } as const;
