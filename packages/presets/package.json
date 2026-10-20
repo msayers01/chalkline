@@ -1,0 +1,20 @@
+{
+  "name": "@chalkline/presets",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Built-in presets, preamble modules and the tagged-PDF package allowlist.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:snap": "vitest run test/snap"
+  },
+  "dependencies": {
+    "@chalkline/conventions": "workspace:*",
+    "@chalkline/ir": "workspace:*",
+    "@chalkline/latex": "workspace:*"
+  }
+}

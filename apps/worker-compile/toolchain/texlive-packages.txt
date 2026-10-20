@@ -1,0 +1,24 @@
+# Installed on top of scheme-small. Every package a preamble module loads must
+# be here and on the allowlist in packages/presets/src/packages.ts.
+latexmk
+latex-lab
+luamml
+fontspec
+unicode-math
+lm
+lm-math
+tex-gyre
+tex-gyre-math
+fira
+firamath
+firamath-otf
+gnu-freefont
+geometry
+fancyhdr
+lastpage
+xcolor
+tools
+booktabs
+tcolorbox
+pgf
+siunitx

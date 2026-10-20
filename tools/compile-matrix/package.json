@@ -1,0 +1,21 @@
+{
+  "name": "@chalkline/compile-matrix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compiles every preset x fixture x key convention combination with LuaLaTeX.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "matrix": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@chalkline/conventions": "workspace:*",
+    "@chalkline/ir": "workspace:*",
+    "@chalkline/latex": "workspace:*",
+    "@chalkline/presets": "workspace:*",
+    "@chalkline/worker-compile": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2"
+  }
+}

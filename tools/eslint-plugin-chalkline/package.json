@@ -1,0 +1,17 @@
+{
+  "name": "@chalkline/eslint-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chalkline lint rules, including no-raw-latex-interpolation.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@typescript-eslint/rule-tester": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.0"
+  }
+}
