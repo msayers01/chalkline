@@ -1,0 +1,18 @@
+{
+  "name": "@chalkline/ink",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stroke grouping into settled regions, erase/correction tracking and request splitting for board ink.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@chalkline/ir": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}
