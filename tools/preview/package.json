@@ -15,7 +15,9 @@
     "@chalkline/latex": "workspace:*",
     "@chalkline/lesson": "workspace:*",
     "@chalkline/presets": "workspace:*",
-    "@chalkline/worker-compile": "workspace:*"
+    "@chalkline/providers": "workspace:*",
+    "@chalkline/worker-compile": "workspace:*",
+    "@chalkline/worker-recognition": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.19.2"

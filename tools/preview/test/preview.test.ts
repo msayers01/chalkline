@@ -63,4 +63,29 @@ describe('previewLesson', () => {
     });
     expect(result).toMatchObject({ ok: false, errors: [{ line: 3 }] });
   });
+
+  it('runs the lesson through the board pipeline first when asked', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'chalkline-preview-'));
+    const lesson = join(dir, 'board.lesson');
+    writeFileSync(
+      lesson,
+      '---\ntitle: T\n---\n# One\n::: problem\nSolve $x^2 = 4$.\nAnswer: $x = 2$\n:::\n',
+    );
+    const run = (board: 'heuristic' | 'ideal') =>
+      previewLesson({
+        lessonPath: lesson,
+        presets: ['answer-key'],
+        settings: {},
+        pdf: false,
+        board,
+      });
+    const ideal = await run('ideal');
+    const heuristic = await run('heuristic');
+    if (!ideal.ok || !heuristic.ok) throw new Error('parse failed');
+    expect(ideal.board?.structure).toMatchObject({ by: 'ai', attempts: 1 });
+    expect(heuristic.board?.structure).toMatchObject({ by: 'heuristic', fallback: 'noModel' });
+    expect(heuristic.board?.counts).toEqual({ ready: 2, check: 0, image: 0, excluded: 0 });
+    const tex = readFileSync(join(dir, 'board-preview', 'answer-key.tex'), 'utf8');
+    expect(tex).toContain('x = 2');
+  });
 });

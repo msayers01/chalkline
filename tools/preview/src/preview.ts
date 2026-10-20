@@ -13,6 +13,7 @@ import {
   type PresetId,
   type PresetRendering,
 } from '@chalkline/presets';
+import { AnthropicJsonModel, type JsonModel } from '@chalkline/providers';
 import {
   bubblewrapAvailable,
   compileBundle,
@@ -20,6 +21,12 @@ import {
   placeholderPng,
   type CompileAsset,
 } from '@chalkline/worker-compile';
+import {
+  recognizeRegions,
+  simulateSession,
+  structureSession,
+  type SessionReport,
+} from '@chalkline/worker-recognition';
 
 export const PRESET_IDS = Object.keys(BUILT_IN_PRESETS) as PresetId[];
 
@@ -86,22 +93,51 @@ export type PresetOutcome = {
   notes: string[];
 };
 
+/**
+ * Runs the lesson through the board pipeline first: written on a simulated
+ * board, recognized, then structured by the heuristic structurer, by a
+ * model that knows the lesson's true structure (`ideal`), or by Claude
+ * (`claude`, needs ANTHROPIC_API_KEY).
+ */
+export const BOARD_MODES = ['heuristic', 'ideal', 'claude'] as const;
+export type BoardMode = (typeof BOARD_MODES)[number];
+
 export type PreviewOptions = {
   lessonPath: string;
   outDir?: string;
   presets: readonly PresetId[];
   settings: PartialConventions;
   pdf: boolean;
+  board?: BoardMode;
+  /** The model for `board: 'claude'`; defaults to the Anthropic API. */
+  model?: JsonModel;
 };
 
 export type PreviewResult =
-  | { ok: true; outDir: string; outcomes: PresetOutcome[]; sandbox: string }
+  | {
+      ok: true;
+      outDir: string;
+      outcomes: PresetOutcome[];
+      sandbox: string;
+      board?: SessionReport;
+    }
   | { ok: false; errors: LessonError[] };
 
 export async function previewLesson(options: PreviewOptions): Promise<PreviewResult> {
   const source = await readFile(options.lessonPath, 'utf8');
   const parsed = parseLesson(source);
   if (!parsed.ok) return { ok: false, errors: parsed.errors };
+
+  let doc = parsed.doc;
+  let lines = parsed.lines;
+  let board: SessionReport | undefined;
+  if (options.board) {
+    const result = await throughBoard(parsed.doc, options.board, options.model);
+    doc = result.doc;
+    board = result.report;
+    // The board document has its own block ids; notes cannot point at lesson lines.
+    lines = new Map();
+  }
 
   const name = basename(options.lessonPath, extname(options.lessonPath));
   const outDir = options.outDir ?? join(dirname(options.lessonPath), `${name}-preview`);
@@ -115,20 +151,20 @@ export async function previewLesson(options: PreviewOptions): Promise<PreviewRes
     options.presets,
     Math.max(1, availableParallelism()),
     async (preset): Promise<PresetOutcome> => {
-      const rendering = renderWithPreset(parsed.doc, preset, { teacher: options.settings });
+      const rendering = renderWithPreset(doc, preset, { teacher: options.settings });
       const texPath = join(outDir, `${preset}.tex`);
       await writeFile(texPath, rendering.tex);
       const outcome: PresetOutcome = {
         preset,
         texPath,
-        notes: describe(rendering, parsed.lines, []),
+        notes: describe(rendering, lines, []),
       };
 
       if (options.pdf && texBin) {
         const assets = await loadAssets(rendering, dirname(options.lessonPath));
         const result = await compileBundle({ tex: rendering.tex, assets }, { texBin, sandbox });
         outcome.seconds = Math.round(result.durationMs / 100) / 10;
-        outcome.notes = describe(rendering, parsed.lines, result.findings);
+        outcome.notes = describe(rendering, lines, result.findings);
         if (result.pdf) {
           outcome.pdfPath = join(outDir, `${preset}.pdf`);
           await writeFile(outcome.pdfPath, result.pdf);
@@ -143,7 +179,28 @@ export async function previewLesson(options: PreviewOptions): Promise<PreviewRes
       return outcome;
     },
   );
-  return { ok: true, outDir, outcomes, sandbox };
+  return { ok: true, outDir, outcomes, sandbox, ...(board ? { board } : {}) };
+}
+
+async function throughBoard(
+  lesson: Doc,
+  mode: BoardMode,
+  model: JsonModel | undefined,
+): Promise<{ doc: Doc; report: SessionReport }> {
+  const session = simulateSession(lesson);
+  const { blocks } = await recognizeRegions(session.regions, session.recognizer);
+  const structurer =
+    mode === 'ideal'
+      ? session.oracle
+      : mode === 'claude'
+        ? (model ?? new AnthropicJsonModel())
+        : undefined;
+  return structureSession({
+    blocks,
+    identity: { id: lesson.id, sessionId: lesson.sessionId, version: 1, meta: lesson.meta },
+    pass: 'final',
+    ...(structurer ? { model: structurer } : {}),
+  });
 }
 
 /** Figures and image fallbacks use `<ref>.png` / `<ref>.pdf` next to the lesson, or a grey placeholder. */

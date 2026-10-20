@@ -1,13 +1,21 @@
 /**
- * pnpm preview <lesson file> [--preset set|all|<id>,<id>] [--set key=value ...] [--out DIR] [--no-pdf]
+ * pnpm preview <lesson file> [--preset set|all|<id>,<id>] [--set key=value ...] [--board MODE] [--out DIR] [--no-pdf]
  *
  * Renders a lesson written in the lesson format (packages/lesson/README.md)
  * with the chosen presets and conventions, and compiles each one to PDF in
  * the same sandboxed runner production uses.
  */
-import { isAbsolute, relative, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { PRESET_IDS, parseSettings, presetsFor, previewLesson } from './preview.js';
+import {
+  BOARD_MODES,
+  PRESET_IDS,
+  parseSettings,
+  presetsFor,
+  previewLesson,
+  type BoardMode,
+} from './preview.js';
 
 const usage = `Usage: pnpm preview <lesson file> [options]
 
@@ -16,6 +24,11 @@ const usage = `Usage: pnpm preview <lesson file> [options]
   --set key=value            override a convention; repeatable, e.g.
                              --set font=pagella --set paperSize=a4 --set fontSize=14
                              --set lang=es --set decimalSeparator=comma --set vectors=bold
+  --board heuristic|ideal|claude
+                             write the lesson on a simulated board and run it through
+                             recognition and structuring first: the heuristic structurer,
+                             a model that knows the right answer, or Claude (needs
+                             ANTHROPIC_API_KEY, from the environment or .env.local)
   --out DIR                  output folder (default: <lesson>-preview next to the lesson)
   --no-pdf                   write .tex only`;
 
@@ -25,6 +38,7 @@ const { values, positionals } = parseArgs({
     preset: { type: 'string', default: 'set' },
     set: { type: 'string', multiple: true, default: [] },
     out: { type: 'string' },
+    board: { type: 'string' },
     'no-pdf': { type: 'boolean', default: false },
     help: { type: 'boolean', default: false },
   },
@@ -52,17 +66,44 @@ if (!settings.ok) {
   process.exit(2);
 }
 
+const board = values.board as BoardMode | undefined;
+if (board !== undefined && !BOARD_MODES.includes(board)) {
+  console.error(`--board must be one of ${BOARD_MODES.join(', ')}`);
+  process.exit(2);
+}
+if (board === 'claude') {
+  // Keys live in .env.local at the repository root, never in the repository.
+  const envFile = join(import.meta.dirname, '..', '..', '..', '.env.local');
+  if (existsSync(envFile)) process.loadEnvFile(envFile);
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('--board claude needs ANTHROPIC_API_KEY (in the environment or .env.local)');
+    process.exit(2);
+  }
+}
+
 const result = await previewLesson({
   lessonPath: fromCwd(lesson),
   presets: presets.presets,
   settings: settings.settings,
   pdf: !values['no-pdf'],
   ...(values.out ? { outDir: fromCwd(values.out) } : {}),
+  ...(board ? { board } : {}),
 });
 
 if (!result.ok) {
   for (const e of result.errors) console.error(`${show(fromCwd(lesson))}:${e.line}: ${e.message}`);
   process.exit(1);
+}
+
+if (result.board) {
+  const { structure, counts } = result.board;
+  const by =
+    structure.by === 'ai'
+      ? `${structure.model ?? 'model'} (${structure.attempts} attempt${structure.attempts === 1 ? '' : 's'})`
+      : `heuristic${structure.fallback && structure.fallback !== 'noModel' ? ` (model ${structure.fallback})` : ''}`;
+  console.log(
+    `board: structured by ${by}; ${counts.ready} ready, ${counts.check} to check, ${counts.image} images, ${counts.excluded} excluded`,
+  );
 }
 
 let failed = false;

@@ -25,6 +25,7 @@ import {
   placeholderPng,
   type CompileOptions,
 } from '@chalkline/worker-compile';
+import { boardDocs } from './board.js';
 import { allowlistDoc, randomDoc } from './samples.js';
 
 type Variant = { name: string; chain: Omit<ConventionChain, 'preset'> };
@@ -124,6 +125,33 @@ if (random > 0) {
   });
 }
 
+// Pipeline output: every fixture through the simulated board, with the
+// compile probe running against this TeX Live first.
+const board = await boardDocs({
+  compile: async (job) => {
+    const result = await compileBundle(job, options);
+    return result.ok ? 'ok' : result.timedOut ? 'unavailable' : 'failed';
+  },
+  placeholder: placeholderPng(),
+});
+for (const [name, report] of Object.entries(board.probes)) {
+  const verdict = report.unavailable ? 'no verdict' : `${report.failed.length} failed`;
+  console.log(
+    `compile-matrix: probe ${name}: ${report.probed} blocks, ${report.compiles} compiles, ${verdict}`,
+  );
+}
+for (const [name, doc] of Object.entries(board.docs)) {
+  const boardPresets = name === 'board-model-quadratics' ? presets : (['lecture-notes'] as const);
+  for (const preset of boardPresets) {
+    cases.push({
+      id: `${preset}__${name}__default`,
+      doc: () => doc,
+      preset,
+      variant: VARIANTS[0] as Variant,
+    });
+  }
+}
+
 const selected = values.only ? cases.filter((c) => c.id.includes(values.only ?? '')) : cases;
 
 async function runCase(c: Case): Promise<Outcome> {
@@ -216,9 +244,12 @@ for (const o of outcomes) {
   console.log(`${status.padEnd(9)} ${o.id.padEnd(58)} ${String(o.seconds).padStart(5)}s  ${extra}`);
 }
 const failed = outcomes.filter((o) => !o.ok || o.ua2 === 'fail');
+// A block the sanitizer accepted but TeX rejected is a sanitizer bug, even though the pipeline coped.
+const probeFailures = Object.values(board.probes).flatMap((r) => r.failed);
 await writeFile(join(outDir, 'summary.json'), `${JSON.stringify(outcomes, null, 2)}\n`);
 console.log(
   `compile-matrix: ${outcomes.length - failed.length}/${outcomes.length} passed in ${Math.round((Date.now() - started) / 1000)}s` +
-    (failed.length ? `; failed: ${failed.map((f) => f.id).join(', ')}` : ''),
+    (failed.length ? `; failed: ${failed.map((f) => f.id).join(', ')}` : '') +
+    (probeFailures.length ? `; probe rejected blocks ${probeFailures.join(', ')}` : ''),
 );
-process.exit(failed.length ? 1 : 0);
+process.exit(failed.length || probeFailures.length ? 1 : 0);
