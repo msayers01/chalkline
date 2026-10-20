@@ -1,0 +1,5 @@
+% Chalkline compile hardening. Read before the distribution's texmf.cnf, so
+% these values win. The runner also sets them in the environment.
+shell_escape = f
+openin_any = p
+openout_any = p

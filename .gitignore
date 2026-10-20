@@ -1,0 +1,18 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+# LaTeX build products from the compile matrix and local experiments
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.out
+*.synctex.gz
+tools/compile-matrix/out/
+# Output of pnpm preview
+*-preview/

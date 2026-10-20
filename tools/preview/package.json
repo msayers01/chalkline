@@ -1,0 +1,25 @@
+{
+  "name": "@chalkline/preview",
+  "version": "0.1.0",
+  "private": true,
+  "description": "pnpm preview: render a lesson file with any preset and conventions to .tex and PDF.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "preview": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@chalkline/conventions": "workspace:*",
+    "@chalkline/ir": "workspace:*",
+    "@chalkline/latex": "workspace:*",
+    "@chalkline/lesson": "workspace:*",
+    "@chalkline/presets": "workspace:*",
+    "@chalkline/providers": "workspace:*",
+    "@chalkline/worker-compile": "workspace:*",
+    "@chalkline/worker-recognition": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2"
+  }
+}

@@ -1,0 +1,105 @@
+% Chalkline handout: Exit Ticket (preset exit-ticket v1).
+% Document 01JQD00000000000000000002X, version 1.
+% Compile with LuaLaTeX, TeX Live 2025 or later: latexmk -lualatex main.tex
+\DocumentMetadata{lang=en, pdfversion=2.0, pdfstandard=ua-2, tagging=on, tagging-setup={math/setup=mathml-SE}}
+\documentclass[11pt]{article}
+\usepackage[letterpaper,margin=1in,headheight=15pt]{geometry}
+\usepackage{amsmath}
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\directlua{luaotfload.add_fallback("clfallback", {"Latin Modern Math:mode=node;", "file:FreeSerif.otf:mode=node;"})}
+\setmainfont{Latin Modern Roman}[RawFeature={fallback=clfallback}]
+\setmathfont{Latin Modern Math}
+\usepackage{xcolor}
+\definecolor{clBlue}{HTML}{1F4E9C}
+\definecolor{clRed}{HTML}{B3261E}
+\definecolor{clGreen}{HTML}{1E6B34}
+\definecolor{clOrange}{HTML}{A65200}
+\definecolor{clPurple}{HTML}{6B3FA0}
+\definecolor{clBrown}{HTML}{7A4A1E}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\NewDocumentCommand{\clheader}{mm}{\fancyhead[L]{\small #1}\fancyhead[R]{\small #2}}
+\NewDocumentCommand{\clfooter}{m}{\fancyfoot[C]{\small #1}}
+\newif\ifcltitled
+\NewDocumentCommand{\cltitle}{mm}{%
+  \ifcltitled
+    \begin{center}{\Large #1\par}\smallskip{#2\par}\end{center}%
+  \else
+    \title{#1}\author{#2}\date{}%
+    \maketitle\thispagestyle{fancy}\vspace{-2em}\global\cltitledtrue
+  \fi}
+\NewDocumentCommand{\clquizheader}{mmm}{%
+  \par\noindent #1: \rule{6cm}{0.4pt}\hfill #2: \rule{3cm}{0.4pt}\hfill #3: \rule{2cm}{0.4pt}\par\bigskip}
+\NewDocumentEnvironment{cldefinition}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{cltheorem}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clnote}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clexample}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clannouncement}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clproblem}{mm}{\par\medskip\noindent\textbf{#1.}\IfBlankF{#2}{ \textit{(#2)}}\ \ignorespaces}{\par}
+\NewDocumentEnvironment{clparts}{}{\begin{enumerate}[label=(\alph*)]}{\end{enumerate}}
+\NewDocumentEnvironment{clsolution}{m}{\par\smallskip\noindent\textit{#1.}\ \ignorespaces}{\par\smallskip}
+\NewDocumentCommand{\clanswer}{mm}{\par\smallskip\noindent\textit{#1:}\ #2\par}
+\NewDocumentCommand{\clanswerboxed}{mm}{\par\smallskip\noindent\textit{#1:}\ \fbox{#2}\par}
+\NewDocumentCommand{\clanswerspace}{m}{\par\vspace{#1\baselineskip}}
+\NewDocumentCommand{\clplaceholder}{m}{\fbox{\textit{#1}}}
+\NewDocumentCommand{\clblank}{m}{\par\noindent\fbox{\parbox[t][#1\baselineskip][t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\mbox{}}}\par}
+\NewDocumentCommand{\clcutline}{}{\par\vspace{1.5em}\noindent\makebox[\linewidth]{\dotfill}\par\vspace{1.5em}}
+\NewDocumentEnvironment{clkeep}{}{\par\noindent\begin{minipage}{\linewidth}\setlength{\parskip}{0.5\baselineskip}}{\end{minipage}\par}
+\NewDocumentEnvironment{clcolumns}{}{}{}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5\baselineskip}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\hypersetup{pdftitle={Solving quadratic equations — Exit Ticket}, pdfdisplaydoctitle=true}
+\clheader{Algebra II — Period 3}{October 20, 2026}
+\clfooter{Page \thepage\ of \pageref{LastPage}}
+
+\begin{document}
+\cltitle{Solving quadratic equations — Exit Ticket}{Algebra II — Period 3 · José Nguyễn · October 20, 2026 · Unit 4: Quadratics}
+
+% blk:01JQD000000000000000000027
+\begin{clproblem}{1}{}
+% blk:01JQD000000000000000000023
+\[
+3x^{2} = 27
+\]
+\clanswerspace{2}
+\end{clproblem}
+
+% blk:01JQD00000000000000000002N
+\begin{clproblem}{2}{}
+% blk:01JQD000000000000000000029
+A ball is thrown upward; its height is \(h(t) = -4.9t^{2} + 19.6t\) metres. When does it land?
+
+\clanswerspace{4}
+\end{clproblem}
+
+\clcutline
+\cltitle{Solving quadratic equations — Exit Ticket}{Algebra II — Period 3 · José Nguyễn · October 20, 2026 · Unit 4: Quadratics}
+
+% blk:01JQD000000000000000000027
+\begin{clproblem}{1}{}
+% blk:01JQD000000000000000000023
+\[
+3x^{2} = 27
+\]
+\clanswerspace{2}
+\end{clproblem}
+
+% blk:01JQD00000000000000000002N
+\begin{clproblem}{2}{}
+% blk:01JQD000000000000000000029
+A ball is thrown upward; its height is \(h(t) = -4.9t^{2} + 19.6t\) metres. When does it land?
+
+\clanswerspace{4}
+\end{clproblem}
+
+\end{document}

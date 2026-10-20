@@ -1,0 +1,146 @@
+% Chalkline handout: Lecture Notes (preset lecture-notes v2).
+% Document 01JCA000000000000000000017, version 1.
+% Compile with LuaLaTeX, TeX Live 2025 or later: latexmk -lualatex main.tex
+\DocumentMetadata{lang=es, pdfversion=2.0, pdfstandard=ua-2, tagging=on, tagging-setup={math/setup=mathml-SE}}
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2.5cm,headheight=15pt]{geometry}
+\usepackage{amsmath}
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\directlua{luaotfload.add_fallback("clfallback", {"TeX Gyre Pagella Math:mode=node;", "file:FreeSerif.otf:mode=node;"})}
+\setmainfont{TeX Gyre Pagella}[RawFeature={fallback=clfallback}]
+\setmathfont{TeX Gyre Pagella Math}
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\emergencystretch=3em
+\usepackage{xcolor}
+\definecolor{clBlue}{HTML}{1F4E9C}
+\definecolor{clRed}{HTML}{B3261E}
+\definecolor{clGreen}{HTML}{1E6B34}
+\definecolor{clOrange}{HTML}{A65200}
+\definecolor{clPurple}{HTML}{6B3FA0}
+\definecolor{clBrown}{HTML}{7A4A1E}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\NewDocumentCommand{\clheader}{mm}{\fancyhead[L]{\small #1}\fancyhead[R]{\small #2}}
+\NewDocumentCommand{\clfooter}{m}{\fancyfoot[C]{\small #1}}
+\newif\ifcltitled
+\NewDocumentCommand{\cltitle}{mm}{%
+  \ifcltitled
+    \begin{center}{\Large #1\par}\smallskip{#2\par}\end{center}%
+  \else
+    \title{#1}\author{#2}\date{}%
+    \maketitle\thispagestyle{fancy}\vspace{-2em}\global\cltitledtrue
+  \fi}
+\NewDocumentCommand{\clquizheader}{mmm}{%
+  \par\noindent #1: \rule{6cm}{0.4pt}\hfill #2: \rule{3cm}{0.4pt}\hfill #3: \rule{2cm}{0.4pt}\par\bigskip}
+\NewDocumentEnvironment{cldefinition}{mm}{\begin{tcolorbox}[colback=white,colframe=black!55,boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt]\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\end{tcolorbox}}
+\NewDocumentEnvironment{cltheorem}{mm}{\begin{tcolorbox}[colback=white,colframe=black!55,boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,top=4pt,bottom=4pt,before skip=8pt,after skip=8pt]\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\end{tcolorbox}}
+\NewDocumentEnvironment{clnote}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clexample}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clannouncement}{mm}{\par\medskip\noindent\textbf{#1\IfBlankF{#2}{: #2}.}\ \ignorespaces}{\par\medskip}
+\NewDocumentEnvironment{clproblem}{mm}{\par\medskip\noindent\textbf{#1.}\IfBlankF{#2}{ \textit{(#2)}}\ \ignorespaces}{\par}
+\NewDocumentEnvironment{clparts}{}{\begin{enumerate}[label=(\alph*)]}{\end{enumerate}}
+\NewDocumentEnvironment{clsolution}{m}{\par\smallskip\noindent\textit{#1.}\ \ignorespaces}{\par\smallskip}
+\NewDocumentCommand{\clanswer}{mm}{\par\smallskip\noindent\textit{#1:}\ #2\par}
+\NewDocumentCommand{\clanswerboxed}{mm}{\par\smallskip\noindent\textit{#1:}\ \fbox{#2}\par}
+\NewDocumentCommand{\clanswerspace}{m}{\par\vspace{#1\baselineskip}}
+\NewDocumentCommand{\clplaceholder}{m}{\fbox{\textit{#1}}}
+\NewDocumentCommand{\clblank}{m}{\par\noindent\fbox{\parbox[t][#1\baselineskip][t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\mbox{}}}\par}
+\NewDocumentCommand{\clcutline}{}{\par\vspace{1.5em}\noindent\makebox[\linewidth]{\dotfill}\par\vspace{1.5em}}
+\NewDocumentEnvironment{clkeep}{}{\par\noindent\begin{minipage}{\linewidth}\setlength{\parskip}{0.5\baselineskip}}{\end{minipage}\par}
+\NewDocumentEnvironment{clcolumns}{}{}{}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5\baselineskip}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\hypersetup{pdftitle={Derivadas e integrales}, pdfdisplaydoctitle=true}
+\clheader{Cálculo I}{21 de octubre de 2026}
+\clfooter{Página \thepage\ de \pageref{LastPage}}
+
+\begin{document}
+\cltitle{Derivadas e integrales}{Cálculo I · Ana Müller-Šimić · 21 de octubre de 2026}
+
+\section*{La derivada}
+
+% blk:01JCA000000000000000000002
+\begin{equation}
+\frac{\mathrm{d}y}{\mathrm{d}x}= \lim_{h \to 0}\frac{f(x + h) - f(x)}{h}
+\end{equation}
+
+% blk:01JCA000000000000000000004
+\begin{equation}
+\frac{\mathrm{d}}{\mathrm{d}x}x^{n} = n x^{n-1}
+\end{equation}
+
+% blk:01JCA000000000000000000006
+\begin{equation}
+f'(x) = 3x^{2} \cdot 2
+\end{equation}
+
+% blk:01JCA00000000000000000000A
+\begin{cltheorem}{Teorema}{Regla de la cadena}
+% blk:01JCA000000000000000000008
+\begin{equation}
+\frac{\mathrm{d}}{\mathrm{d}x}f(g(x)) = f'(g(x)) \cdot g'(x)
+\end{equation}
+\end{cltheorem}
+
+% blk:01JCA00000000000000000000C
+La velocidad \(\mathbf{v}= \mathbf{v}_{0} + \mathbf{a}t\) con \(a = 9{,}81\) y \(\mathbf{F}= m \mathbf{a}\).
+
+% blk:01JCA00000000000000000000E
+\textcolor{clRed}{\textbf{Importante: }}no olvides la constante \textcolor{clBlue}{\(C\)}.
+
+\section*{La integral}
+
+% blk:01JCA00000000000000000000H
+\begin{equation}
+\int_{0}^{1} x^{2} \mathrm{d}x = \frac{1}{3}
+\end{equation}
+
+% blk:01JCA00000000000000000000K
+\begin{equation}
+\int_{0}^{\pi}\sin x \, \mathrm{d}x = 2
+\end{equation}
+
+% blk:01JCA00000000000000000000N
+\begin{equation}
+A = 3{,}14 \cdot r^{2}
+\end{equation}
+
+% blk:01JCA00000000000000000000Q
+\begin{equation}
+f(x) = \begin{cases}x^{2}&x \geq 0 \\ -x&x < 0\end{cases}
+\end{equation}
+
+% blk:01JCA00000000000000000000X
+\begin{clproblem}{1}{}
+% blk:01JCA00000000000000000000S
+Calcula \(\int_{1}^{2} \frac{1}{x}\mathrm{d}x\).
+
+% blk:01JCA00000000000000000000V
+\clanswerboxed{Respuesta}{\(\ln 2 \approx 0{,}693\)}
+\end{clproblem}
+
+% blk:01JCA000000000000000000015
+\begin{clproblem}{2}{}
+% blk:01JCA00000000000000000000Z
+Resuelve el sistema:
+
+% blk:01JCA000000000000000000011
+\begin{equation}
+\begin{pmatrix}1 & 2 \\ 3 & 4\end{pmatrix} \begin{pmatrix}x \\ y\end{pmatrix} = \begin{pmatrix}5 \\ 6\end{pmatrix}
+\end{equation}
+% blk:01JCA000000000000000000013
+\clanswerboxed{Respuesta}{\(x = -4\), \(y = 4{,}5\)}
+\end{clproblem}
+
+\end{document}
