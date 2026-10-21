@@ -340,8 +340,8 @@ Compilation runs in a warm pool of sandboxed containers with no network, a read-
 
 | Control | Setting |
 | --- | --- |
-| Shell escape | Disabled (`-no-shell-escape`, `shell_escape = f`) |
-| File access | `openin_any = p` and `openout_any = p`: TeX reads and writes only inside the job directory |
+| Shell escape | Disabled (`-no-shell-escape`, `shell_escape = f`); the `--lua` initialization script also turns off Lua's `io.popen` and `os.execute`, which LuaTeX leaves to such scripts |
+| File access | Writes: `openout_any = p`, only inside the job directory. Reads: `openin_any = p` does not stop LuaTeX from reading absolute paths, so `confine.lua` (loaded with `--lua`) refuses `\input`, `\openin` and images that resolve outside the job directory and the TeX trees, also where there is no sandbox (Windows development) |
 | Network | None: task without egress, plus a sandbox with no network namespace |
 | File system | Read-only root, tmpfs working directory, wiped after every job |
 | Resources | 2 vCPU, 4 GB memory, 60 s wall clock, 50 MB output cap |

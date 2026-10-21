@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseLatexLog, type LogFinding } from '@chalkline/latex';
 import { executable, pathEntries } from './texlive.js';
 
@@ -10,10 +11,13 @@ import { executable, pathEntries } from './texlive.js';
  * Compiles one bundle (main.tex plus assets) with latexmk and LuaLaTeX.
  *
  * Defense in depth: the .tex only ever comes from the renderer, and the run
- * is still treated as hostile. Shell escape is off, TeX may only open files
- * inside the job directory, latexmk ignores rc files, and in production the
- * whole process runs in a bubblewrap sandbox with no network namespace and a
- * read-only view of the system. The job directory is deleted afterwards.
+ * is still treated as hostile. Shell escape is off; TeX may write only inside
+ * the job directory (openout_any=p) and read only files in the job directory
+ * or the TeX trees (confine.lua, which also holds without the sandbox, as on
+ * Windows); latexmk ignores rc files. In production the whole process also
+ * runs in a bubblewrap sandbox with no network namespace and a read-only view
+ * of the system, which additionally keeps Lua code away from other files.
+ * The job directory is deleted afterwards.
  */
 
 export type CompileAsset = { path: string; bytes: Uint8Array };
@@ -68,10 +72,17 @@ export function compileCacheKey(job: CompileJob, texliveRelease: number): string
   return hash.digest('hex');
 }
 
-export function latexmkArgs(): string[] {
+/** The LuaTeX initialization script that confines reads to the job and the TeX trees. */
+export const CONFINE_SCRIPT = fileURLToPath(new URL('./confine.lua', import.meta.url));
+
+export function latexmkArgs(confineScript: string = CONFINE_SCRIPT): string[] {
+  // latexmk splits this command line itself; forward slashes keep a Windows
+  // path free of backslash escapes, and the quotes keep spaces in it.
+  const script = confineScript.replace(/\\/g, '/');
   return [
     '-norc',
     '-lualatex',
+    `-pdflualatex=lualatex --fmt=lualatex --lua="${script}" %O %S`,
     '-interaction=nonstopmode',
     '-halt-on-error',
     '-file-line-error',
@@ -117,6 +128,7 @@ function sandboxed(
   const readOnly = [...(options.sandboxReadOnly ?? COMPILE_DEFAULTS.sandboxReadOnly)];
   // The TeX installation in use must be visible: <prefix>/<release>/bin/<platform>.
   if (options.texBin) readOnly.push(resolve(options.texBin, '..', '..', '..'));
+  readOnly.push(dirname(CONFINE_SCRIPT));
   return [
     'bwrap',
     [

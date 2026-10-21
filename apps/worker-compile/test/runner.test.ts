@@ -1,9 +1,13 @@
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   bubblewrapAvailable,
   compileBundle,
   compileCacheKey,
   findTexBin,
+  latexmkArgs,
   pathEntries,
   placeholderPng,
   texEnvironment,
@@ -68,6 +72,14 @@ describe('TeX Live on Windows', () => {
   });
 });
 
+describe('latexmkArgs', () => {
+  it('runs LuaLaTeX with the confinement script, Windows paths included', () => {
+    expect(latexmkArgs('C:\\Users\\Jane Doe\\confine.lua')).toContain(
+      '-pdflualatex=lualatex --fmt=lualatex --lua="C:/Users/Jane Doe/confine.lua" %O %S',
+    );
+  });
+});
+
 describe('placeholderPng', () => {
   it('produces a PNG', () => {
     expect(Array.from(placeholderPng(2, 2).slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
@@ -106,12 +118,54 @@ describe.skipIf(!texBin)(`compileBundle (sandbox: ${sandbox})`, () => {
     expect(result.ok).toBe(false);
   }, 120_000);
 
+  it('cannot open files outside the job directory for reading or as images', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'chalkline-outside-'));
+    await writeFile(join(outside, 'secret.tex'), 'SECRET');
+    await writeFile(join(outside, 'secret.png'), placeholderPng());
+    const path = (name: string) => join(outside, name).replace(/\\/g, '/');
+    // \openin reports a missing file rather than failing, so the document fails on purpose.
+    const openin = await compileBundle(
+      {
+        tex: doc(
+          `\\newread\\r\\openin\\r=${path('secret.tex')} \\ifeof\\r\\else\\errmessage{read outside}\\fi ok`,
+        ),
+        assets: [],
+      },
+      options,
+    );
+    expect(openin.ok).toBe(true);
+    const image = await compileBundle(
+      {
+        tex: doc(`\\includegraphics{${path('secret.png')}}`).replace(
+          '\\begin{document}',
+          '\\usepackage{graphicx}\n\\begin{document}',
+        ),
+        assets: [],
+      },
+      options,
+    );
+    expect(image.ok).toBe(false);
+  }, 120_000);
+
+  it('cannot step out of the job directory with ..', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chalkline-root-'));
+    await writeFile(join(root, 'secret.tex'), 'SECRET');
+    // The job directory is created inside `root`, so ../secret is right next to it.
+    const result = await compileBundle(
+      { tex: doc('\\input{../secret}'), assets: [] },
+      { ...options, workRoot: root },
+    );
+    expect(result.ok).toBe(false);
+  }, 120_000);
+
   it('has shell escape disabled', async () => {
     const result = await compileBundle(
       {
         tex: doc(
           '\\immediate\\write18{echo pwned > pwned.txt}\\IfFileExists{pwned.txt}{\\errmessage{shell escape ran}}{}' +
-            "\\directlua{if status.shell_escape ~= 0 then tex.error('shell escape on') end} ok",
+            "\\directlua{if status.shell_escape ~= 0 then tex.error('shell escape on') end}" +
+            // Lua's own process functions must be off too (LuaTeX leaves them to --lua scripts).
+            "\\directlua{if io.popen('echo') or os.execute('echo') then tex.error('process ran') end} ok",
         ),
         assets: [],
       },

@@ -160,6 +160,7 @@ When you update snapshots, say in the PR which output changed and why.
 - unified-latex only parses an argument as math when the command's `renderInfo.inMathMode` is set, and never re-parses bare groups or script arguments; `sanitizeMath()` configures every allowlisted command and re-parses those groups. Add a signature for every new allowlisted command.
 - `\_` and `_` are both macros named `_` in the AST; scripts have an empty `escapeToken`.
 - LuaTeX treats every Unicode letter as a letter, so `\cdot` followed by `é` is one undefined command; the serializer separates them.
+- `openin_any=p` does not stop LuaTeX reading absolute paths; reads are confined by `apps/worker-compile/src/confine.lua` (`lualatex --lua`). A `--lua` script must also disable `io.popen`/`os.execute` itself (LuaTeX stops restricting them) and must not call kpathsea before the engine sets it up (`texconfig.kpse_init = true`).
 - An empty line anywhere inside math or a command argument ends the paragraph and breaks the compile; the renderer's writer never emits one except through `blank()`.
 - `enumitem` cannot be loaded under tagging; kernel list keys (`\begin{enumerate}[label=(\alph*)]`) work without it.
 - New preamble packages: check the Tagging Project status, add to `packages/presets/src/packages.ts` and `apps/worker-compile/toolchain/texlive-packages.txt`, then run the compile matrix.
