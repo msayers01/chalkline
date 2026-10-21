@@ -4,7 +4,9 @@ import {
   compileBundle,
   compileCacheKey,
   findTexBin,
+  pathEntries,
   placeholderPng,
+  texEnvironment,
   type CompileOptions,
 } from '../src/index.js';
 
@@ -25,6 +27,44 @@ describe('compileCacheKey', () => {
     expect(
       compileCacheKey({ tex: 'x', assets: [a, { ...b, bytes: new Uint8Array([3]) }] }, 2026),
     ).not.toBe(k1);
+  });
+});
+
+describe('TeX Live on Windows', () => {
+  it("finds the setup script's install, then PATH, by .exe names", () => {
+    const files = new Set([
+      'C:\\texlive\\2026\\bin\\windows\\lualatex.exe',
+      'C:\\texlive\\2026\\bin\\windows\\latexmk.exe',
+      'D:\\tl\\bin\\lualatex.exe',
+      'D:\\tl\\bin\\latexmk.exe',
+    ]);
+    const exists = (p: string) => files.has(p);
+    expect(findTexBin({}, 'win32', exists)).toBe('C:\\texlive\\2026\\bin\\windows');
+    files.delete('C:\\texlive\\2026\\bin\\windows\\latexmk.exe');
+    // Windows spells it Path; entries are separated by semicolons.
+    expect(findTexBin({ Path: 'C:\\Windows;D:\\tl\\bin' }, 'win32', exists)).toBe('D:\\tl\\bin');
+    expect(findTexBin({ PATH: '/usr/bin' }, 'linux', exists)).toBeUndefined();
+  });
+
+  it("splits PATH the platform's way", () => {
+    expect(pathEntries({ Path: 'C:\\a;C:\\b;' }, 'win32')).toEqual(['C:\\a', 'C:\\b']);
+    expect(pathEntries({ PATH: '/a:/b' }, 'linux')).toEqual(['/a', '/b']);
+  });
+
+  it('gives TeX the system root and keeps temporary files in the job', () => {
+    const env = texEnvironment('C:\\job', 'win32', {
+      SYSTEMROOT: 'C:\\Windows',
+      ANTHROPIC_API_KEY: 'secret',
+      TEMP: 'C:\\Users\\t\\Temp',
+    });
+    expect(env).toMatchObject({
+      SYSTEMROOT: 'C:\\Windows',
+      TEMP: 'C:\\job',
+      TMP: 'C:\\job',
+      openin_any: 'p',
+    });
+    expect(Object.keys(env)).not.toContain('ANTHROPIC_API_KEY');
+    expect(texEnvironment('/job', 'linux', { SystemRoot: 'x' })).not.toHaveProperty('SystemRoot');
   });
 });
 

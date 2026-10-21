@@ -8,7 +8,7 @@ Design references (read before large changes):
 
 If code and these docs disagree, stop and ask; do not silently pick one. Keep this file in sync when commands, layout or invariants change.
 
-**Current state (v0.2, Built-in Board pipeline in progress):** `packages/ir`, `conventions`, `latex`, `presets` (all nine), `lesson`, `ink` and `providers`; `apps/worker-compile` (runner + toolchain) and `apps/worker-recognition` (the four pipeline stages as library calls, no queue consumer yet); `tools/eslint-plugin-chalkline`, `tools/compile-matrix` and `tools/preview` exist. Everything else in the layout below is planned. Decisions taken while building (no babel, text font fallback, callouts without amsthm, select step in `ir`, local ids for the model, headings as section titles, derived container ids) are listed in `README.md`.
+**Current state (v0.2, Built-in Board pipeline in progress):** `packages/ir`, `conventions`, `latex`, `presets` (all nine), `lesson`, `ink` and `providers`; `apps/worker-compile` (runner + toolchain, Linux and Windows install scripts) and `apps/worker-recognition` (the four pipeline stages as library calls, no queue consumer yet); a first board slice in `apps/web` (tldraw board, IndexedDB stroke store, ink worker, notes panel) and `apps/api` (local single-user server that runs recognition, structuring and compiles inline; no database, queue or SSE yet); `tools/eslint-plugin-chalkline`, `tools/compile-matrix` and `tools/preview`; `scripts/windows/setup.ps1`. Everything else in the layout below is planned. Decisions taken while building (no babel, text font fallback, callouts without amsthm, select step in `ir`, local ids for the model, headings as section titles, derived container ids, the inline local API, region pictures drawn in the browser) are listed in `README.md`.
 
 ---
 
@@ -42,7 +42,7 @@ apps/
     src/capture/          Companion Capture UI, control pill (Document PiP)
     src/review/           Review screen, MathLive editor, preset switcher
     src/workers/          capture.worker.ts, ink.worker.ts, sync.worker.ts
-  api/                    Fastify REST + SSE, share pages, export orchestration
+  api/                    Fastify REST + SSE, share pages, export orchestration (now: local board API, src/board.ts)
   worker-recognition/     Recognition pipeline: pipeline.ts (recognizeRegions, structureSession)
     src/postprocess/      Mathpix Markdown → leaf blocks: split, repair, sanitize, status by confidence
     src/structure/        schema, prompt, guards, normalize (tags, pins), heuristic, apply (IR builder)
@@ -70,6 +70,7 @@ tools/replay/             Headless replay harness and scoring
 tools/compile-matrix/     pnpm compile-matrix: presets × fixtures × conventions, allowlist, random and board-pipeline docs, veraPDF
 tools/preview/            pnpm preview: lesson file → .tex/PDF per preset, optionally through the board pipeline
 tools/eslint-plugin-chalkline/  chalkline/no-raw-latex-interpolation
+scripts/windows/setup.ps1 Windows setup: Node, pnpm, packages, .env.local, optional TeX Live (toolchain/*.ps1)
 ```
 
 Pure logic belongs in `packages/*` so it can be tested in Node without a browser. `apps/*` wire it to I/O.
@@ -78,11 +79,11 @@ Pure logic belongs in `packages/*` so it can be tested in Node without a browser
 
 ## Commands
 
-Available now: `install`, `typecheck`, `lint`, `format`, `test`, `test:snap`, `compile-matrix`, `preview`. The rest are planned with the packages they belong to.
+Available now: `install`, `dev` (local API + board only; no docker compose yet), `typecheck`, `lint`, `format`, `test`, `test:snap`, `compile-matrix`, `preview`. The rest are planned with the packages they belong to. On Windows, run `scripts\windows\setup.ps1` first; keep `.ps1` files ASCII-only and compatible with Windows PowerShell 5.1.
 
 ```bash
 pnpm install
-pnpm dev                    # docker compose (Postgres, MinIO, compile image) + web + api + workers
+pnpm dev                    # now: local API (127.0.0.1:8787) + board (127.0.0.1:5173); planned: docker compose + workers
 pnpm dev:web                # web only, against staging API (read-only test workspace)
 
 pnpm typecheck

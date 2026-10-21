@@ -1,0 +1,249 @@
+:root {
+  --bg: #f6f6f4;
+  --panel: #ffffff;
+  --text: #1d1d1d;
+  --muted: #5b5b5b;
+  --line: #d9d9d4;
+  --accent: #1f4fbf;
+  --check: #8a5a00;
+  --check-bg: #fff3d6;
+  --warn-bg: #fdecea;
+  --warn: #8c1d13;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  /* Board rules: no page zoom, swipe navigation, pull-to-refresh or text selection while drawing. */
+  overscroll-behavior: none;
+}
+
+.app {
+  display: flex;
+  height: 100%;
+}
+
+.board {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.notes {
+  flex: 0 0 min(420px, 40vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+}
+
+.notes-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+}
+
+.status {
+  margin: 0;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button,
+.button,
+select,
+input {
+  min-height: 48px;
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  padding: 0 14px;
+}
+
+button,
+.button {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button:focus-visible,
+.button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.banner {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.hints {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border-radius: 8px;
+  background: var(--check-bg);
+  color: var(--check);
+}
+
+.regions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.region {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.region-recognizing,
+.region-retrying,
+.region-waiting {
+  border-style: dashed;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.chip {
+  display: inline-block;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  margin-right: 6px;
+}
+
+.chip-check {
+  background: var(--check-bg);
+  color: var(--check);
+}
+
+.block {
+  margin-top: 6px;
+}
+
+.block code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.note {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.handout-form {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.handout-form label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.handout-form .primary {
+  margin-top: 6px;
+  justify-content: center;
+}
+
+.handout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.handout p {
+  margin: 0;
+}
+
+.pdf {
+  width: 100%;
+  height: 520px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.tex {
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.8rem;
+  background: var(--bg);
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.loading,
+.blocking {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+}

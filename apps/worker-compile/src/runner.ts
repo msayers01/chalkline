@@ -2,8 +2,9 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { parseLatexLog, type LogFinding } from '@chalkline/latex';
+import { executable, pathEntries } from './texlive.js';
 
 /**
  * Compiles one bundle (main.tex plus assets) with latexmk and LuaLaTeX.
@@ -80,8 +81,12 @@ export function latexmkArgs(): string[] {
 }
 
 /** kpathsea settings, passed as environment variables so they override texmf.cnf. */
-export function texEnvironment(workDir: string): Record<string, string> {
-  return {
+export function texEnvironment(
+  workDir: string,
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const tex = {
     shell_escape: 'f',
     openin_any: 'p',
     openout_any: 'p',
@@ -89,6 +94,17 @@ export function texEnvironment(workDir: string): Record<string, string> {
     HOME: workDir,
     max_print_line: '1000',
   };
+  if (platform !== 'win32') return tex;
+  // Windows programs (TeX Live's Perl for latexmk among them) need the system
+  // root to start, and write temporary files to TEMP: keep those in the job.
+  const keep = ['SystemRoot', 'windir', 'PATHEXT', 'ComSpec'];
+  const system = Object.fromEntries(
+    Object.entries(env).filter(
+      (e): e is [string, string] =>
+        e[1] !== undefined && keep.some((k) => k.toLowerCase() === e[0].toLowerCase()),
+    ),
+  );
+  return { ...system, ...tex, USERPROFILE: workDir, TEMP: workDir, TMP: workDir };
 }
 
 function sandboxed(
@@ -163,9 +179,11 @@ export async function compileBundle(
       await writeFile(target, asset.bytes);
     }
 
-    const latexmk = options.texBin ? join(options.texBin, 'latexmk') : 'latexmk';
+    const latexmk = options.texBin
+      ? join(options.texBin, executable('latexmk'))
+      : executable('latexmk');
     const [command, args] = sandboxed(latexmk, latexmkArgs(), workDir, options);
-    const path = [options.texBin, process.env.PATH].filter(Boolean).join(':');
+    const path = [options.texBin, ...pathEntries(process.env)].filter(Boolean).join(delimiter);
     const timedOut = await run(
       command,
       args,
@@ -207,11 +225,28 @@ function run(
   timeoutMs: number,
 ): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, env, stdio: 'ignore', detached: true });
+    const windows = process.platform === 'win32';
+    // Its own process group, so the time limit kills latexmk and every TeX run it started.
+    const child = spawn(command, args, {
+      cwd,
+      env,
+      stdio: 'ignore',
+      detached: !windows,
+      windowsHide: true,
+    });
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
-      if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL');
+      if (child.pid === undefined) return;
+      // Windows has no process groups: taskkill /T ends the whole tree.
+      if (windows) {
+        spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+          stdio: 'ignore',
+          windowsHide: true,
+        });
+      } else {
+        process.kill(-child.pid, 'SIGKILL');
+      }
     }, timeoutMs);
     child.on('error', (e) => {
       clearTimeout(timer);

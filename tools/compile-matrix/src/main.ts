@@ -195,8 +195,11 @@ async function pool<T, R>(items: T[], size: number, fn: (item: T) => Promise<R>)
   return results;
 }
 
+const windows = process.platform === 'win32';
+
 function verapdfPath(): string | undefined {
-  const candidates = [process.env.VERAPDF, '/opt/verapdf/verapdf'].filter((p): p is string => !!p);
+  const pinned = windows ? 'C:\\verapdf\\verapdf.bat' : '/opt/verapdf/verapdf';
+  const candidates = [process.env.VERAPDF, pinned].filter((p): p is string => !!p);
   return candidates.find((p) => existsSync(p));
 }
 
@@ -206,18 +209,18 @@ async function validateUa2(outcomes: Outcome[]): Promise<void> {
   if (!verapdf) {
     for (const o of compiled) o.ua2 = 'skipped';
     console.warn(
-      'compile-matrix: veraPDF not found; PDF/UA-2 validation skipped (apps/worker-compile/toolchain/install-verapdf.sh).',
+      `compile-matrix: veraPDF not found; PDF/UA-2 validation skipped (apps/worker-compile/toolchain/install-verapdf.${windows ? 'ps1' : 'sh'}).`,
     );
     return;
   }
   const files = compiled.map((o) => join(outDir, o.id, 'main.pdf'));
-  const { stdout } = await promisify(execFile)(
-    verapdf,
-    ['--flavour', 'ua2', '--format', 'text', ...files],
-    {
-      maxBuffer: 64 * 1024 * 1024,
-    },
-  ).catch((e: { stdout?: string }) => ({ stdout: e.stdout ?? '' }));
+  const args = ['--flavour', 'ua2', '--format', 'text', ...files];
+  // Windows runs verapdf.bat only through cmd.exe, which needs paths with spaces quoted.
+  const quote = (s: string) => (windows ? `"${s}"` : s);
+  const { stdout } = await promisify(execFile)(quote(verapdf), args.map(quote), {
+    maxBuffer: 64 * 1024 * 1024,
+    shell: windows,
+  }).catch((e: { stdout?: string }) => ({ stdout: e.stdout ?? '' }));
   for (const o of compiled) {
     const line = stdout.split('\n').find((l) => l.includes(join(outDir, o.id, 'main.pdf')));
     o.ua2 = line?.startsWith('PASS') ? 'pass' : 'fail';

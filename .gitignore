@@ -16,3 +16,5 @@ coverage/
 tools/compile-matrix/out/
 # Output of pnpm preview
 *-preview/
+# Local provider recordings of your own handwriting (pnpm dev)
+.local/

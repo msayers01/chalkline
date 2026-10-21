@@ -8,7 +8,7 @@ Chalkline (working name) turns what a teacher writes on a smartboard into typese
 
 ## Status: v0.2 in progress (Built-in Board pipeline)
 
-v0.1 built the document engine: the document model, the one safe path from content to LaTeX, conventions, presets and a compile gate that proves every generated document compiles to a tagged PDF/UA-2 file. v0.2 adds everything between board ink and that document: grouping strokes into regions, recognition, cleanup, AI structuring behind guard checks with a heuristic fallback, and compile probes. The review screen and the board itself (the web app) come next.
+v0.1 built the document engine: the document model, the one safe path from content to LaTeX, conventions, presets and a compile gate that proves every generated document compiles to a tagged PDF/UA-2 file. v0.2 adds everything between board ink and that document: grouping strokes into regions, recognition, cleanup, AI structuring behind guard checks with a heuristic fallback, and compile probes. A first slice of the Built-in Board now connects them: you can [draw on a board in the browser](#drawing-on-the-board) and get a handout PDF. The review screen comes next.
 
 | Area                            | State                                                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -21,15 +21,26 @@ v0.1 built the document engine: the document model, the one safe path from conte
 | `packages/providers`            | Mathpix `v3/strokes` and `v3/text` client (data retention opted out), Claude structured-output client (the final pass opts into server-side refusal fallback), recorded providers keyed by a hash of the request so tests never need keys                                                                                                                                              |
 | `apps/worker-recognition`       | The four pipeline stages: post-processing (text and math split, repairs, sanitizing, status by confidence, image fallbacks), structuring (prompt, output schema, guard checks, one retry, heuristic structurer, teacher tags and pinned blocks), compile probe with bisection, and the document builder. A board simulator drives it end to end. The queue consumer is not written yet |
 | `apps/worker-compile`           | Sandboxed latexmk/LuaLaTeX runner (bubblewrap, no network, no shell escape, paranoid file access, time limit, output cap), compile cache key, pinned TeX Live 2026 toolchain scripts and Dockerfile. The queue consumer is not written yet                                                                                                                                             |
+| `apps/web`                      | First slice of the web app: the Built-in Board on tldraw behind `BoardAdapter`, strokes stored in IndexedDB (Dexie) before anything else happens to them, grouping in an ink worker, corrections, each settled region sent for recognition once (with retries), and a notes panel that shows what was read and makes a handout with any preset. Holds a Screen Wake Lock while open    |
+| `apps/api`                      | A local, single-user API on 127.0.0.1 (Fastify): recognition, structuring, compile probes and the handout compile run inline in the request, with no database or queue yet. Provider keys stay in this process; RFC 9457 problem details; idempotent region recognition                                                                                                                |
 | `tools/preview`                 | `pnpm preview`: a lesson file to `.tex` and PDF with any presets and conventions, optionally through the board pipeline first                                                                                                                                                                                                                                                          |
 | `tools/eslint-plugin-chalkline` | `chalkline/no-raw-latex-interpolation`                                                                                                                                                                                                                                                                                                                                                 |
 | `tools/compile-matrix`          | Every preset × fixture × key convention variant, an every-allowlisted-command document, random sanitizer output, and documents built by the recognition pipeline from simulated board sessions (with the compile probe running against real TeX), compiled in the sandbox and validated with veraPDF (PDF/UA-2)                                                                        |
 
-Not started yet (see the release plan in the product design): the web app (board, review screen, library), local-first sync, the API and database, Companion Capture, HTML and Word renderers, and the lesson corpus with replay scoring.
+Not started yet (see the release plan in the product design): the rest of the web app (review screen, library, math tools, sessions and pages), local-first sync, the real API and database, Companion Capture, HTML and Word renderers, and the lesson corpus with replay scoring.
 
 ## Getting started
 
 Requirements: Node 22.12+ (24 LTS in production), pnpm 10 (`corepack enable`).
+
+**On Windows**, one script installs Node 24 LTS (with winget), pnpm, the project's packages, writes `.env.local` (asking for your Mathpix keys) and offers to install TeX Live:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows\setup.ps1             # asks before TeX Live
+powershell -ExecutionPolicy Bypass -File scripts\windows\setup.ps1 -TeXLive    # installs it without asking
+```
+
+TeX Live goes to `C:\texlive\2026` for the current user (no administrator rights, PATH untouched); `apps\worker-compile\toolchain\install-texlive.ps1` and `install-verapdf.ps1` install TeX Live and veraPDF on their own. Windows compiles always run without the bubblewrap sandbox, which is Linux-only, so they are for development, not for serving untrusted documents.
 
 ```bash
 pnpm install
@@ -49,6 +60,16 @@ pnpm compile-matrix --quick      # default conventions only
 ```
 
 `TEXLIVE_BIN` and `VERAPDF` override the tool locations. Outputs (`.tex`, `.pdf`, `.log`, `summary.json`) land in `tools/compile-matrix/out/`.
+
+### Drawing on the board
+
+```bash
+pnpm dev     # the local API on 127.0.0.1:8787 and the board on http://127.0.0.1:5173
+```
+
+Write on the board with a pen, finger or mouse. About two seconds after you stop writing in one place, that group of writing (a region) is sent to Mathpix and appears in the Notes panel as text and LaTeX, marked Check when the recognizer was unsure, or kept as a picture of your ink when it could not be read. "Read it now" sends what you are still writing without waiting. Erase something and rewrite it in the same place within 20 seconds and the new writing replaces the old. "Make handout" organizes everything (with the built-in rules, or Claude when `ANTHROPIC_API_KEY` is set) and typesets it with the preset you choose; with TeX Live installed you get the PDF, otherwise the `.tex`. The board and the notes survive a reload; "New board" starts over.
+
+Reading handwriting needs Mathpix keys in `.env.local` (copy `.env.example`). With `PROVIDERS=record`, the default there, every answer is saved under `.local/recordings/`, so drawing exactly the same strokes again costs nothing; `PROVIDERS=live` always calls Mathpix. Without keys the board still works, and regions wait until you add keys, restart `pnpm dev` and press "Try again".
 
 ### Previewing a lesson
 
@@ -84,6 +105,13 @@ From the recognition pipeline (v0.2):
 12. **Status comes from `confidence_rate`.** Mathpix's `confidence` is the probability that the whole output is exactly right, which falls with length and would send every long derivation to review; `confidence_rate` is per character. The thresholds (0.85 and 0.6) still need tuning on the corpus.
 13. **No figure alt text yet.** The model sees no crops in v0.2, so it marks drawings as figures and leaves alt text to the teacher (flagged as unconfirmed).
 
+From the board (first slice):
+
+14. **The local API runs everything inline.** Recognition, structuring and compiling happen in the request on one machine, with no database, queue or SSE; the browser keeps the session in IndexedDB and sends the recognized blocks with each handout request. The endpoints follow the planned `/v1` names where they exist (`POST /v1/sessions/{id}/regions` takes the stroke data itself instead of returning an upload URL) so the real API can replace it.
+15. **Region pictures are drawn in the browser.** Each region's strokes are drawn to a PNG when it settles, so a block kept as an image shows the teacher's actual ink in the handout instead of a placeholder.
+16. **Point times are spread over the stroke.** tldraw keeps positions, not times, so each stroke's points are given evenly spaced times between pen down and pen up. Grouping and recognition only use the order and the span.
+17. **Board events are handled in order.** Strokes, erasures and clock ticks go through one queue, each stamped with the time it happened, so a tick can never close a region before a stroke that is still being stored has joined it.
+
 ## Known gaps
 
 - **Compile time.** A 3-page handout takes about 11 s in the sandbox with Latin Modern and about 17 s with Fira Sans in large print (4-core container, warm font caches). latexmk runs several LuaLaTeX passes for tagging and page references. The architecture targets p95 under 15 s for 10 pages, so the worker needs work here: a warm pool, a persistent per-job cache of `.aux` files between edits of the same document, and fewer passes.
@@ -93,4 +121,6 @@ From the recognition pipeline (v0.2):
 - **Recognition worker wiring.** The pipeline runs as library calls; the queue consumer, retries with backoff for up to 10 minutes, the Claude vision backup recognizer and rendering region crops (strokes to PNG) are not built.
 - **Structuring passes rebuild the document** from its blocks. Teacher edits, exclusions, placements, points and pinned section titles are kept, but the order of blocks a teacher moved is not yet protected, and typed blocks inside a structured block keep their parent but not their exact position.
 - **The heuristic structurer** treats the blocks after a problem as its solution until the next labelled block, as the architecture describes, so unlabelled lecture text written after a problem is pulled into it. It cannot see crossed-out work; only the model can.
+- **The board slice is a first cut.** It has no session states, pages beyond tldraw's own, teacher tags, math tools, review editing, pen-versus-finger modes or 56 px toolbar; tldraw's default UI is used as is (with its development watermark until `VITE_TLDRAW_LICENSE_KEY` is set). Moving ink after it was read does not change its region. After a reload, erasing ink that was read before the reload is not treated as a correction.
+- **Unsandboxed compiles can read any file.** `openin_any=p` does not stop LuaTeX from reading absolute paths, so without bubblewrap (local development on Linux, and every compile on Windows) only the sanitizer keeps a document from reading files outside its job; the runner test for this fails when TeX Live is installed without bubblewrap.
 - **No recordings or prompt evaluation yet.** Without provider keys here, the Claude prompt has been checked for shape (schema, guards, retries) but not evaluated on real board sessions, and no recorded provider responses are checked in. That needs the lesson corpus.
