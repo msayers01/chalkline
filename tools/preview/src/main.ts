@@ -119,7 +119,7 @@ for (const o of result.outcomes) {
 }
 if (!values['no-pdf'] && result.outcomes.every((o) => !o.pdfPath && !o.compileError)) {
   console.warn(
-    'No TeX Live found, so only .tex files were written. Install it with apps/worker-compile/toolchain/install-texlive.sh.',
+    `No TeX Live found, so only .tex files were written. Install it with apps/worker-compile/toolchain/install-texlive.${process.platform === 'win32' ? 'ps1' : 'sh'}.`,
   );
 } else if (result.sandbox === 'none' && !values['no-pdf']) {
   console.warn('bubblewrap not found: compiled without the sandbox.');

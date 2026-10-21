@@ -1,0 +1,29 @@
+{
+  "name": "@chalkline/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The API. For now: a local, single-user server that runs recognition, structuring and compiles inline for the board.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@chalkline/ink": "workspace:*",
+    "@chalkline/ir": "workspace:*",
+    "@chalkline/presets": "workspace:*",
+    "@chalkline/providers": "workspace:*",
+    "@chalkline/worker-compile": "workspace:*",
+    "@chalkline/worker-recognition": "workspace:*",
+    "fastify": "^5.12.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2"
+  }
+}

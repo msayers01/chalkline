@@ -2,17 +2,22 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseLatexLog, type LogFinding } from '@chalkline/latex';
+import { executable, pathEntries } from './texlive.js';
 
 /**
  * Compiles one bundle (main.tex plus assets) with latexmk and LuaLaTeX.
  *
  * Defense in depth: the .tex only ever comes from the renderer, and the run
- * is still treated as hostile. Shell escape is off, TeX may only open files
- * inside the job directory, latexmk ignores rc files, and in production the
- * whole process runs in a bubblewrap sandbox with no network namespace and a
- * read-only view of the system. The job directory is deleted afterwards.
+ * is still treated as hostile. Shell escape is off; TeX may write only inside
+ * the job directory (openout_any=p) and read only files in the job directory
+ * or the TeX trees (confine.lua, which also holds without the sandbox, as on
+ * Windows); latexmk ignores rc files. In production the whole process also
+ * runs in a bubblewrap sandbox with no network namespace and a read-only view
+ * of the system, which additionally keeps Lua code away from other files.
+ * The job directory is deleted afterwards.
  */
 
 export type CompileAsset = { path: string; bytes: Uint8Array };
@@ -67,10 +72,17 @@ export function compileCacheKey(job: CompileJob, texliveRelease: number): string
   return hash.digest('hex');
 }
 
-export function latexmkArgs(): string[] {
+/** The LuaTeX initialization script that confines reads to the job and the TeX trees. */
+export const CONFINE_SCRIPT = fileURLToPath(new URL('./confine.lua', import.meta.url));
+
+export function latexmkArgs(confineScript: string = CONFINE_SCRIPT): string[] {
+  // latexmk splits this command line itself; forward slashes keep a Windows
+  // path free of backslash escapes, and the quotes keep spaces in it.
+  const script = confineScript.replace(/\\/g, '/');
   return [
     '-norc',
     '-lualatex',
+    `-pdflualatex=lualatex --fmt=lualatex --lua="${script}" %O %S`,
     '-interaction=nonstopmode',
     '-halt-on-error',
     '-file-line-error',
@@ -80,8 +92,12 @@ export function latexmkArgs(): string[] {
 }
 
 /** kpathsea settings, passed as environment variables so they override texmf.cnf. */
-export function texEnvironment(workDir: string): Record<string, string> {
-  return {
+export function texEnvironment(
+  workDir: string,
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const tex = {
     shell_escape: 'f',
     openin_any: 'p',
     openout_any: 'p',
@@ -89,6 +105,17 @@ export function texEnvironment(workDir: string): Record<string, string> {
     HOME: workDir,
     max_print_line: '1000',
   };
+  if (platform !== 'win32') return tex;
+  // Windows programs (TeX Live's Perl for latexmk among them) need the system
+  // root to start, and write temporary files to TEMP: keep those in the job.
+  const keep = ['SystemRoot', 'windir', 'PATHEXT', 'ComSpec'];
+  const system = Object.fromEntries(
+    Object.entries(env).filter(
+      (e): e is [string, string] =>
+        e[1] !== undefined && keep.some((k) => k.toLowerCase() === e[0].toLowerCase()),
+    ),
+  );
+  return { ...system, ...tex, USERPROFILE: workDir, TEMP: workDir, TMP: workDir };
 }
 
 function sandboxed(
@@ -101,6 +128,7 @@ function sandboxed(
   const readOnly = [...(options.sandboxReadOnly ?? COMPILE_DEFAULTS.sandboxReadOnly)];
   // The TeX installation in use must be visible: <prefix>/<release>/bin/<platform>.
   if (options.texBin) readOnly.push(resolve(options.texBin, '..', '..', '..'));
+  readOnly.push(dirname(CONFINE_SCRIPT));
   return [
     'bwrap',
     [
@@ -163,9 +191,11 @@ export async function compileBundle(
       await writeFile(target, asset.bytes);
     }
 
-    const latexmk = options.texBin ? join(options.texBin, 'latexmk') : 'latexmk';
+    const latexmk = options.texBin
+      ? join(options.texBin, executable('latexmk'))
+      : executable('latexmk');
     const [command, args] = sandboxed(latexmk, latexmkArgs(), workDir, options);
-    const path = [options.texBin, process.env.PATH].filter(Boolean).join(':');
+    const path = [options.texBin, ...pathEntries(process.env)].filter(Boolean).join(delimiter);
     const timedOut = await run(
       command,
       args,
@@ -207,11 +237,28 @@ function run(
   timeoutMs: number,
 ): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, env, stdio: 'ignore', detached: true });
+    const windows = process.platform === 'win32';
+    // Its own process group, so the time limit kills latexmk and every TeX run it started.
+    const child = spawn(command, args, {
+      cwd,
+      env,
+      stdio: 'ignore',
+      detached: !windows,
+      windowsHide: true,
+    });
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
-      if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL');
+      if (child.pid === undefined) return;
+      // Windows has no process groups: taskkill /T ends the whole tree.
+      if (windows) {
+        spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+          stdio: 'ignore',
+          windowsHide: true,
+        });
+      } else {
+        process.kill(-child.pid, 'SIGKILL');
+      }
     }, timeoutMs);
     child.on('error', (e) => {
       clearTimeout(timer);

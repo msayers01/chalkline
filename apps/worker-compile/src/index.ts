@@ -13,4 +13,4 @@ export type {
   SandboxMode,
 } from './runner.js';
 export { placeholderPng } from './placeholder.js';
-export { bubblewrapAvailable, findTexBin } from './texlive.js';
+export { bubblewrapAvailable, executable, findTexBin, pathEntries } from './texlive.js';

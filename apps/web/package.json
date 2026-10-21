@@ -1,0 +1,29 @@
+{
+  "name": "@chalkline/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The web app. For now: the Built-in Board, drawing straight into recognition and a handout preview.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@chalkline/ink": "workspace:*",
+    "@chalkline/ir": "workspace:*",
+    "dexie": "^4.4.6",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "tldraw": "^5.5.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "fake-indexeddb": "^6.2.6",
+    "vite": "^8.3.4"
+  }
+}

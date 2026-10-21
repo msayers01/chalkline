@@ -1,10 +1,16 @@
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   bubblewrapAvailable,
   compileBundle,
   compileCacheKey,
   findTexBin,
+  latexmkArgs,
+  pathEntries,
   placeholderPng,
+  texEnvironment,
   type CompileOptions,
 } from '../src/index.js';
 
@@ -25,6 +31,52 @@ describe('compileCacheKey', () => {
     expect(
       compileCacheKey({ tex: 'x', assets: [a, { ...b, bytes: new Uint8Array([3]) }] }, 2026),
     ).not.toBe(k1);
+  });
+});
+
+describe('TeX Live on Windows', () => {
+  it("finds the setup script's install, then PATH, by .exe names", () => {
+    const files = new Set([
+      'C:\\texlive\\2026\\bin\\windows\\lualatex.exe',
+      'C:\\texlive\\2026\\bin\\windows\\latexmk.exe',
+      'D:\\tl\\bin\\lualatex.exe',
+      'D:\\tl\\bin\\latexmk.exe',
+    ]);
+    const exists = (p: string) => files.has(p);
+    expect(findTexBin({}, 'win32', exists)).toBe('C:\\texlive\\2026\\bin\\windows');
+    files.delete('C:\\texlive\\2026\\bin\\windows\\latexmk.exe');
+    // Windows spells it Path; entries are separated by semicolons.
+    expect(findTexBin({ Path: 'C:\\Windows;D:\\tl\\bin' }, 'win32', exists)).toBe('D:\\tl\\bin');
+    expect(findTexBin({ PATH: '/usr/bin' }, 'linux', exists)).toBeUndefined();
+  });
+
+  it("splits PATH the platform's way", () => {
+    expect(pathEntries({ Path: 'C:\\a;C:\\b;' }, 'win32')).toEqual(['C:\\a', 'C:\\b']);
+    expect(pathEntries({ PATH: '/a:/b' }, 'linux')).toEqual(['/a', '/b']);
+  });
+
+  it('gives TeX the system root and keeps temporary files in the job', () => {
+    const env = texEnvironment('C:\\job', 'win32', {
+      SYSTEMROOT: 'C:\\Windows',
+      ANTHROPIC_API_KEY: 'secret',
+      TEMP: 'C:\\Users\\t\\Temp',
+    });
+    expect(env).toMatchObject({
+      SYSTEMROOT: 'C:\\Windows',
+      TEMP: 'C:\\job',
+      TMP: 'C:\\job',
+      openin_any: 'p',
+    });
+    expect(Object.keys(env)).not.toContain('ANTHROPIC_API_KEY');
+    expect(texEnvironment('/job', 'linux', { SystemRoot: 'x' })).not.toHaveProperty('SystemRoot');
+  });
+});
+
+describe('latexmkArgs', () => {
+  it('runs LuaLaTeX with the confinement script, Windows paths included', () => {
+    expect(latexmkArgs('C:\\Users\\Jane Doe\\confine.lua')).toContain(
+      '-pdflualatex=lualatex --fmt=lualatex --lua="C:/Users/Jane Doe/confine.lua" %O %S',
+    );
   });
 });
 
@@ -66,12 +118,54 @@ describe.skipIf(!texBin)(`compileBundle (sandbox: ${sandbox})`, () => {
     expect(result.ok).toBe(false);
   }, 120_000);
 
+  it('cannot open files outside the job directory for reading or as images', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'chalkline-outside-'));
+    await writeFile(join(outside, 'secret.tex'), 'SECRET');
+    await writeFile(join(outside, 'secret.png'), placeholderPng());
+    const path = (name: string) => join(outside, name).replace(/\\/g, '/');
+    // \openin reports a missing file rather than failing, so the document fails on purpose.
+    const openin = await compileBundle(
+      {
+        tex: doc(
+          `\\newread\\r\\openin\\r=${path('secret.tex')} \\ifeof\\r\\else\\errmessage{read outside}\\fi ok`,
+        ),
+        assets: [],
+      },
+      options,
+    );
+    expect(openin.ok).toBe(true);
+    const image = await compileBundle(
+      {
+        tex: doc(`\\includegraphics{${path('secret.png')}}`).replace(
+          '\\begin{document}',
+          '\\usepackage{graphicx}\n\\begin{document}',
+        ),
+        assets: [],
+      },
+      options,
+    );
+    expect(image.ok).toBe(false);
+  }, 120_000);
+
+  it('cannot step out of the job directory with ..', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chalkline-root-'));
+    await writeFile(join(root, 'secret.tex'), 'SECRET');
+    // The job directory is created inside `root`, so ../secret is right next to it.
+    const result = await compileBundle(
+      { tex: doc('\\input{../secret}'), assets: [] },
+      { ...options, workRoot: root },
+    );
+    expect(result.ok).toBe(false);
+  }, 120_000);
+
   it('has shell escape disabled', async () => {
     const result = await compileBundle(
       {
         tex: doc(
           '\\immediate\\write18{echo pwned > pwned.txt}\\IfFileExists{pwned.txt}{\\errmessage{shell escape ran}}{}' +
-            "\\directlua{if status.shell_escape ~= 0 then tex.error('shell escape on') end} ok",
+            "\\directlua{if status.shell_escape ~= 0 then tex.error('shell escape on') end}" +
+            // Lua's own process functions must be off too (LuaTeX leaves them to --lua scripts).
+            "\\directlua{if io.popen('echo') or os.execute('echo') then tex.error('process ran') end} ok",
         ),
         assets: [],
       },

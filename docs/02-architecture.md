@@ -112,6 +112,13 @@ The browser does three jobs in parallel: draw ink with low latency on the main t
 6. Math boxes, plots, number lines and tables bypass recognition and write IR blocks directly with confidence 1.
 7. While capturing, the board holds a Screen Wake Lock so the panel never dims mid-lesson.
 
+Implementation notes (first board slice, `apps/web` and `apps/api`):
+
+- Strokes are stored in IndexedDB (Dexie) when the board reports them, then handed to the ink worker; board events, erasures and clock ticks go through one queue, each stamped with the time it happened. Nothing is deleted: erased strokes are marked, replaced regions keep their row. The op log, sync and session states are not built yet.
+- tldraw keeps positions but not times, so a stroke's point times are spread evenly between pen down and pen up.
+- Each region's ink is drawn to a PNG in the browser when it settles and used as the crop for blocks kept as images.
+- Until the real API exists, a local single-user API runs recognition, structuring, probes and the handout compile inline (no database, queue or SSE). The browser keeps the session and sends recognized blocks with each handout request. `POST /v1/sessions/{id}/regions` takes the stroke data in the body and is idempotent per region id; retryable recognizer failures are not cached.
+
 ### Companion Capture frame path
 
 1. **Acquire.** `getDisplayMedia` with a window surface preferred, audio off, the app's own tab excluded, and a 5 frames-per-second cap. The video track is transferred to the capture worker.
@@ -333,8 +340,8 @@ Compilation runs in a warm pool of sandboxed containers with no network, a read-
 
 | Control | Setting |
 | --- | --- |
-| Shell escape | Disabled (`-no-shell-escape`, `shell_escape = f`) |
-| File access | `openin_any = p` and `openout_any = p`: TeX reads and writes only inside the job directory |
+| Shell escape | Disabled (`-no-shell-escape`, `shell_escape = f`); the `--lua` initialization script also turns off Lua's `io.popen` and `os.execute`, which LuaTeX leaves to such scripts |
+| File access | Writes: `openout_any = p`, only inside the job directory. Reads: `openin_any = p` does not stop LuaTeX from reading absolute paths, so `confine.lua` (loaded with `--lua`) refuses `\input`, `\openin` and images that resolve outside the job directory and the TeX trees, also where there is no sandbox (Windows development) |
 | Network | None: task without egress, plus a sandbox with no network namespace |
 | File system | Read-only root, tmpfs working directory, wiped after every job |
 | Resources | 2 vCPU, 4 GB memory, 60 s wall clock, 50 MB output cap |
