@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Graduation Credit Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: one centered column of working panels; summary first, then grades, then make-up plans. */
+:root {
+  --bg: #f3f6f8;
+  --surface: #ffffff;
+  --ink: #16212b;
+  --muted: #586774;
+  --line: #d6dee5;
+  --accent: #1d5f8a;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2eef6;
+  --good: #23784a;
+  --good-soft: #e1f2e8;
+  --warn: #9a6200;
+  --warn-soft: #fbefd7;
+  --bad: #b3261e;
+  --bad-soft: #fbe3e1;
+  --planned: #c9d8e4;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e151b; --surface: #16212a; --ink: #e5edf3; --muted: #9babb8; --line: #2b3a46;
+    --accent: #6cb0de; --accent-ink: #0b1620; --accent-soft: #1b3446;
+    --good: #5cc28b; --good-soft: #163626; --warn: #e3a843; --warn-soft: #3a2d12;
+    --bad: #f17d73; --bad-soft: #43201d; --planned: #2f4a5e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e151b; --surface: #16212a; --ink: #e5edf3; --muted: #9babb8; --line: #2b3a46;
+  --accent: #6cb0de; --accent-ink: #0b1620; --accent-soft: #1b3446;
+  --good: #5cc28b; --good-soft: #163626; --warn: #e3a843; --warn-soft: #3a2d12;
+  --bad: #f17d73; --bad-soft: #43201d; --planned: #2f4a5e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+[hidden] { display: none !important; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.05rem; }
+p { margin: 0; }
+.app { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; padding-top: 24px; }
+.top .sub { color: var(--muted); font-size: 0.9rem; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar select { max-width: 260px; }
+
+/* Controls */
+button, select, input, textarea { font: inherit; color: inherit; }
+button {
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 500; min-height: 40px;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.danger { color: var(--bad); }
+button.danger:hover { border-color: var(--bad); }
+button.link { border: 0; background: none; color: var(--accent); padding: 4px 2px; min-height: 0; text-decoration: underline; }
+select, input[type="text"], input[type="number"], input[type="date"], textarea {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-height: 40px; max-width: 100%;
+}
+textarea { min-height: 72px; resize: vertical; width: 100%; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+label.field { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); font-weight: 500; min-width: 0; }
+label.field > input, label.field > select, label.field > textarea { color: var(--ink); font-size: 0.95rem; font-weight: 400; }
+
+/* Panels */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.sec-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.hint { color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
+.banner { background: var(--accent-soft); border-radius: 8px; padding: 12px 14px; font-size: 0.92rem; }
+.banner.warn { background: var(--warn-soft); }
+
+.info-grid { display: grid; gap: 12px 16px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.info-grid .wide { grid-column: 1 / -1; }
+
+/* Summary */
+.total { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: end; }
+.total .big { font-family: var(--font-display); font-size: 2.6rem; font-weight: 700; line-height: 1; }
+.total .big small { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 0.9rem; }
+.stats b { font-variant-numeric: tabular-nums; }
+.verdict { padding: 12px 14px; border-radius: 8px; font-weight: 500; }
+.verdict.good { background: var(--good-soft); }
+.verdict.warn { background: var(--warn-soft); }
+.verdict.bad { background: var(--bad-soft); }
+
+.bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--bg); border: 1px solid var(--line); }
+.bar.lg { height: 18px; border-radius: 9px; }
+.bar span { display: block; height: 100%; }
+.seg-earned { background: var(--good); }
+.seg-ip { background: repeating-linear-gradient(135deg, var(--accent) 0 5px, var(--accent-soft) 5px 9px); }
+.seg-planned { background: var(--planned); }
+.seg-short { background: repeating-linear-gradient(135deg, var(--bad-soft) 0 5px, transparent 5px 9px); box-shadow: inset 0 0 0 1px var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.82rem; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+
+.cats { display: grid; gap: 2px; }
+.cat { display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(120px, 2fr) minmax(170px, 1.2fr); gap: 6px 16px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.cat:first-child { border-top: 0; }
+.cat .name { font-weight: 600; }
+.cat .name small { display: block; font-weight: 400; color: var(--muted); font-size: 0.82rem; }
+.cat .figs { font-size: 0.85rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; justify-content: flex-end; }
+.cat .figs b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.cat .note { grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); }
+@media (max-width: 640px) {
+  .cat { grid-template-columns: 1fr; }
+  .cat .figs { justify-content: flex-start; }
+}
+
+.chip { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.chip.good { background: var(--good-soft); color: var(--good); border-color: transparent; }
+.chip.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.chip.bad { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.chip.info { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
+/* Grades */
+.quick { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 14px; border: 1px dashed var(--line); border-radius: 8px; }
+.quick .ttl { flex-basis: 100%; font-weight: 600; }
+.year { display: grid; gap: 8px; }
+.year-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.year-head .muted { font-size: 0.88rem; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { padding: 6px 10px; text-align: left; border-top: 1px solid var(--line); vertical-align: middle; }
+thead th { border-top: 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--bg); }
+td.c, th.c { text-align: center; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.cname { font-weight: 500; }
+.cname small { display: block; color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+.flag { color: var(--warn); font-size: 0.8rem; }
+.gsel { min-width: 64px; text-align: center; font-weight: 600; min-height: 38px; padding: 4px 6px; }
+.gsel.v-pass { color: var(--good); }
+.gsel.v-F { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+.gsel.v-I { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.gsel.v-IP { background: var(--accent-soft); color: var(--accent); }
+.gsel.done { background: var(--good-soft); color: var(--good); border-color: var(--good); }
+.na { color: var(--line); }
+.edit-row input[type="text"] { width: 100%; min-width: 160px; }
+.edit-row input[type="number"] { width: 80px; }
+.qboxes { display: flex; gap: 8px; }
+.qboxes label { display: flex; gap: 3px; align-items: center; font-size: 0.85rem; }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.inactive { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 0.88rem; color: var(--muted); }
+
+/* Plans */
+.plans { display: grid; gap: 12px; }
+.plan { border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 12px; }
+.plan.s-bad { border-left-color: var(--bad); }
+.plan.s-warn { border-left-color: var(--warn); }
+.plan.s-good { border-left-color: var(--good); }
+.plan.s-info { border-left-color: var(--accent); }
+.plan-head { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; align-items: start; }
+.plan-head p { color: var(--muted); font-size: 0.88rem; }
+.plan-grid { display: grid; gap: 10px 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.plan-grid .wide { grid-column: 1 / -1; }
+.madeup { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 0.9rem; }
+.madeup legend { float: left; font-weight: 600; margin-right: 6px; font-size: 0.85rem; color: var(--muted); }
+.madeup label { display: flex; gap: 6px; align-items: center; }
+.empty { padding: 18px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
+
+.steps { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 0.92rem; max-width: 72ch; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Dialog + toast */
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 22px; max-width: min(460px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+dialog .btnrow { justify-content: flex-end; margin-top: 18px; }
+dialog p { margin-top: 8px; color: var(--muted); }
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 0.92rem; max-width: calc(100vw - 32px); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 20; }
+#toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+
+/* Print snapshot (screen: hidden) */
+#printView { display: none; }
+@media print {
+  @page { size: letter; margin: 0.5in; }
+  body { background: #fff; color: #000; padding: 0; font-size: 10.5pt; }
+  .app, #toast, dialog { display: none !important; }
+  #printView { display: block; color: #000; }
+  #printView h1 { font-size: 18pt; }
+  #printView h2 { font-size: 12pt; margin: 14pt 0 5pt; border-bottom: 1.5pt solid #000; padding-bottom: 2pt; }
+  #printView h3 { font-size: 10.5pt; margin: 8pt 0 3pt; }
+  #printView table { width: 100%; border-collapse: collapse; font-size: 9.5pt; page-break-inside: auto; }
+  #printView tr { page-break-inside: avoid; }
+  #printView th, #printView td { border: 0.75pt solid #999; padding: 3pt 5pt; background: none; color: #000; }
+  #printView thead th { background: #eee; font-size: 8pt; letter-spacing: 0.04em; }
+  #printView .p-meta { margin-top: 3pt; font-size: 10pt; }
+  #printView .p-total { display: flex; gap: 18pt; align-items: baseline; margin-top: 8pt; }
+  #printView .p-total b { font-size: 22pt; }
+  #printView .p-verdict { margin-top: 6pt; padding: 5pt 8pt; border: 1pt solid #000; }
+  #printView .p-short { font-weight: 700; }
+  #printView .p-years { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14pt; }
+  #printView .p-note { border: 0.75pt solid #999; padding: 6pt 8pt; min-height: 40pt; white-space: pre-wrap; }
+  #printView .p-foot { margin-top: 10pt; font-size: 8pt; color: #333; }
+  #printView .p-fail { font-weight: 700; text-decoration: underline; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>Graduation Credit Tracker</h1>
+      <p class="sub">21.5 credits to graduate. Quarter system: each quarter of a 1-credit course is worth 0.25 credit.</p>
+    </div>
+    <div class="toolbar">
+      <label for="recordSelect" class="sr">Student record</label>
+      <select id="recordSelect"></select>
+      <button id="btnNew" type="button">New student</button>
+      <button id="btnImport" type="button">Open file</button>
+      <input type="file" id="fileInput" accept=".json,application/json" hidden>
+      <button id="btnExport" type="button">Save file</button>
+      <button id="btnPrint" type="button" class="primary">Print / Save PDF</button>
+    </div>
+  </header>
+
+  <div id="storageWarn" class="banner warn" hidden>This browser is not saving changes (private window or blocked site data). Use <b>Save file</b> before closing this page.</div>
+  <div id="welcome" class="banner" hidden>New here? If your advisor sent you a file, press <b>Open file</b> and choose it. Your grades and credits will fill in automatically.</div>
+
+  <section class="panel" id="secInfo" data-section="info" aria-labelledby="infoTitle">
+    <h2 id="infoTitle">Student</h2>
+    <div class="info-grid">
+      <label class="field">Student ID or initials (no names)
+        <input type="text" id="fLabel" data-act="label" maxlength="40" placeholder="e.g. 20417 or J.M." autocomplete="off">
+      </label>
+      <label class="field">Current grade level
+        <select id="fGrade" data-act="grade-level">
+          <option value="9">9th grade</option><option value="10">10th grade</option>
+          <option value="11">11th grade</option><option value="12">12th grade</option>
+        </select>
+      </label>
+      <label class="field">Class of
+        <input type="text" id="fClassOf" data-act="classof" inputmode="numeric" maxlength="4" placeholder="e.g. 2028" autocomplete="off">
+      </label>
+      <label class="field wide">Note for the printed snapshot (optional)
+        <textarea id="fNote" data-act="note" maxlength="1200" placeholder="e.g. Great progress this quarter. Finish the English 10 packet before winter break."></textarea>
+      </label>
+    </div>
+  </section>
+
+  <section class="panel" id="secSummary" data-section="summary" aria-labelledby="sumTitle"></section>
+  <section class="panel" id="secGrades" data-section="grades" aria-labelledby="gradesTitle"></section>
+  <section class="panel" id="secPlans" data-section="plans" aria-labelledby="plansTitle"></section>
+
+  <section class="panel" id="secData" aria-labelledby="dataTitle">
+    <h2 id="dataTitle">Files and sharing</h2>
+    <p class="hint">Everything stays in this browser on this device. Nothing is uploaded anywhere.</p>
+    <ol class="steps">
+      <li>Fill in the student's quarter grades, then press <b>Save file</b>. You get a small <code>.json</code> file named after the student ID.</li>
+      <li>Send that file to the student (Google Drive, Classroom or email).</li>
+      <li>The student opens this page on their Chromebook, presses <b>Open file</b> and picks the file. Their credits and make-up plan fill in.</li>
+      <li>Students can plan their make-up work and press <b>Save file</b> to send the updated plan back. Opening it here replaces your copy for that student.</li>
+    </ol>
+    <div class="btnrow">
+      <button type="button" id="btnBackup">Back up all students</button>
+      <button type="button" id="btnDelete" class="danger">Delete this student</button>
+    </div>
+  </section>
+</div>
+
+<div id="printView"></div>
+<dialog id="dlg" aria-labelledby="dlgTitle"><h2 id="dlgTitle"></h2><p id="dlgBody"></p><div class="btnrow" id="dlgBtns"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* ---------- School rules ---------- */
+const CATS = [
+  { id: 'la',   name: 'Language Arts',             req: 4 },
+  { id: 'ss',   name: 'Social Studies',            req: 3.5 },
+  { id: 'sci',  name: 'Science',                   req: 3 },
+  { id: 'math', name: 'Math',                      req: 3 },
+  { id: 'pe',   name: 'Physical Education/Health', req: 1 },
+  { id: 'art',  name: 'Art',                       req: 1 },
+  { id: 'oj',   name: 'Ojibwe Language',           req: 2 },
+  { id: 'elec', name: 'Electives',                 req: 4 },
+];
+const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+const TOTAL_REQ = CATS.reduce((s, c) => s + c.req, 0);
+const YEARS = [9, 10, 11, 12];
+const GRADE_OPTS = ['', 'A', 'B', 'C', 'D', 'P', 'F', 'I', 'IP'];
+const PASS = new Set(['A', 'B', 'C', 'D', 'P']);
+const FAIL = new Set(['F', 'I']);
+const METHODS = ['Online course', 'Additional work packet', 'Retake the course', 'Summer school', 'Independent study', 'Credit by exam / test-out', 'Other'];
+const STATUSES = ['Not started', 'In progress', 'Complete'];
+const FILE_FORMAT = 'graduation-credit-tracker';
+const STORE_KEY = 'graduationCreditTracker.v1';
+
+function course(year, id, name, cat, credits, quarters = [1, 2, 3, 4], extra = {}) {
+  return { id, year, name, cat, credits, quarters, active: extra.active !== false, assumed: extra.assumed || '' };
+}
+const DEFAULT_COURSES = [
+  course(9, 'geometry', 'Geometry', 'math', 1),
+  course(9, 'eng9', 'English 9', 'la', 1),
+  course(9, 'physsci', 'Physical Science', 'sci', 1),
+  course(9, 'ushist', 'U.S. History', 'ss', 1),
+  course(9, 'ojib9', 'Ojibwemowen 9', 'oj', 1),
+  course(9, 'pe9', 'Physical Education 9', 'pe', 0.5, [1, 2]),
+  course(9, 'music9', 'Music 9', 'art', 0.5, [3, 4], { assumed: 'Counted toward Art. Quarters assumed to be Q3–Q4.' }),
+  course(10, 'alg2', 'Algebra II', 'math', 1),
+  course(10, 'eng10', 'English 10', 'la', 1),
+  course(10, 'bio10', 'Biology 10', 'sci', 1),
+  course(10, 'ojib10', 'Ojibwemowen 10', 'oj', 1),
+  course(10, 'worldhist', 'World History I & II', 'ss', 1),
+  course(10, 'pe10', 'Physical Education 10', 'pe', 1),
+  course(11, 'probstats', 'Probability & Statistics', 'math', 1),
+  course(11, 'eng11', 'English 11', 'la', 1),
+  course(11, 'gov', 'Government I & II', 'ss', 0.5, [1, 2]),
+  course(11, 'geog', 'Geography', 'ss', 0.5, [3, 4]),
+  course(11, 'chem11', 'Chemistry 11', 'sci', 1),
+  course(11, 'ojib1112', 'Ojibwemowen 11 & 12', 'oj', 1),
+  course(11, 'pe11', 'Physical Education 11', 'pe', 1),
+  course(12, 'eng12', 'English 12', 'la', 1),
+  course(12, 'econ', 'Economics', 'ss', 0.5, [1, 2], { assumed: 'Length not confirmed. Set to 0.5 credit over Q1–Q2.' }),
+  course(12, 'art912', 'Art 9-12', 'art', 0.5, [3, 4], { assumed: 'Length not confirmed. Set to 0.5 credit over Q3–Q4.' }),
+  course(12, 'ojib1112mk', 'Ojibwemowen 11 & 12 (make-up)', 'oj', 1, [1, 2, 3, 4], { active: false, assumed: 'Only for seniors who need to make up Ojibwe.' }),
+];
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+const clone = x => JSON.parse(JSON.stringify(x));
+const uid = p => p + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+const fmt = n => String(Math.round(n * 100) / 100);
+const credits = n => fmt(n) + (Math.abs(n - 1) < 1e-9 ? ' credit' : ' credits');
+const yearName = y => y + 'th grade';
+const near0 = n => Math.abs(n) < 1e-6;
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+function today() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function parseDate(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function niceDate(d) { return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
+function isoDay(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function qList(qs) { return qs.map(q => 'Q' + q).join(', '); }
+
+/* ---------- Data model ---------- */
+function normalizeCourse(c) {
+  if (!c || typeof c !== 'object') return null;
+  const year = YEARS.includes(Number(c.year)) ? Number(c.year) : 9;
+  let cr = Number(c.credits);
+  if (!(cr >= 0 && cr <= 10)) cr = 1;
+  let qs = Array.isArray(c.quarters) ? [...new Set(c.quarters.map(Number).filter(q => q >= 1 && q <= 4))].sort() : [1, 2, 3, 4];
+  if (!qs.length) qs = [1, 2, 3, 4];
+  return {
+    id: String(c.id || uid('c')).slice(0, 40), year,
+    name: String(c.name ?? 'Course').slice(0, 80), cat: CAT[c.cat] ? c.cat : 'elec',
+    credits: cr, quarters: qs, active: c.active !== false, assumed: c.assumed ? String(c.assumed).slice(0, 200) : '',
+  };
+}
+function normalizeRecord(r) {
+  if (!r || typeof r !== 'object') return null;
+  const courses = (Array.isArray(r.courses) ? r.courses : clone(DEFAULT_COURSES)).map(normalizeCourse).filter(Boolean);
+  const ids = new Set(courses.map(c => c.id));
+  const grades = {};
+  if (r.grades && typeof r.grades === 'object') {
+    for (const [cid, qs] of Object.entries(r.grades)) {
+      if (!ids.has(cid) || !qs || typeof qs !== 'object') continue;
+      for (const q of [1, 2, 3, 4]) {
+        const v = qs[q];
+        if (typeof v === 'string' && v && GRADE_OPTS.includes(v)) (grades[cid] ||= {})[q] = v;
+      }
+    }
+  }
+  const plans = {};
+  if (r.plans && typeof r.plans === 'object') {
+    for (const [cid, p] of Object.entries(r.plans)) {
+      if (!ids.has(cid) || !p || typeof p !== 'object') continue;
+      const done = {};
+      if (p.done && typeof p.done === 'object') for (const q of [1, 2, 3, 4]) if (p.done[q] === true) done[q] = true;
+      plans[cid] = {
+        method: METHODS.includes(p.method) ? p.method : '',
+        details: String(p.details ?? '').slice(0, 300),
+        deadline: parseDate(p.deadline) ? p.deadline : '',
+        status: STATUSES.includes(p.status) ? p.status : 'Not started',
+        done,
+      };
+    }
+  }
+  const grade = YEARS.includes(Number(r.grade)) ? Number(r.grade) : 9;
+  return {
+    id: String(r.id || uid('s')).slice(0, 40),
+    label: String(r.label ?? '').slice(0, 40),
+    grade, classOf: String(r.classOf ?? '').replace(/\D/g, '').slice(0, 4),
+    note: String(r.note ?? '').slice(0, 1200),
+    courses, grades, plans,
+    updated: typeof r.updated === 'string' ? r.updated : new Date().toISOString(),
+  };
+}
+function newRecord() {
+  return normalizeRecord({ id: uid('s'), courses: clone(store.defaultCourses || DEFAULT_COURSES), grades: {}, plans: {} });
+}
+function isBlank(r) {
+  return !r.label && !r.note && !r.classOf && !Object.keys(r.grades).length && !Object.keys(r.plans).length;
+}
+
+let storageOK = true;
+let store = { records: [], currentId: null, defaultCourses: null };
+function load() {
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { storageOK = false; }
+  if (data && typeof data === 'object') {
+    if (Array.isArray(data.defaultCourses)) store.defaultCourses = data.defaultCourses.map(normalizeCourse).filter(Boolean);
+    if (Array.isArray(data.records)) store.records = data.records.map(normalizeRecord).filter(Boolean);
+    store.currentId = data.currentId;
+  }
+  if (!store.records.length) { store.records.push(newRecord()); $('welcome').hidden = false; }
+  if (!store.records.some(r => r.id === store.currentId)) store.currentId = store.records[0].id;
+}
+function save(touch = true) {
+  const r = cur();
+  if (r && touch) r.updated = new Date().toISOString();
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); storageOK = true; }
+  catch (e) { storageOK = false; }
+  $('storageWarn').hidden = storageOK;
+}
+const cur = () => store.records.find(r => r.id === store.currentId);
+const findCourse = (r, cid) => r.courses.find(c => c.id === cid);
+const gradeOf = (r, cid, q) => (r.grades[cid] || {})[q] || '';
+const isMadeUp = (r, cid, q) => !!(r.plans[cid] && r.plans[cid].done[q]);
+function planFor(r, cid) {
+  return r.plans[cid] ||= { method: '', details: '', deadline: '', status: 'Not started', done: {} };
+}
+
+/* ---------- Credit math ---------- */
+// Credits past an area's requirement spill into Electives.
+function allocate(amt) {
+  const out = {}; let spill = 0;
+  for (const c of CATS) {
+    if (c.id === 'elec') continue;
+    const a = amt[c.id] || 0;
+    out[c.id] = Math.min(a, c.req);
+    spill += a - out[c.id];
+  }
+  out.elec = Math.min((amt.elec || 0) + spill, CAT.elec.req);
+  out.spill = spill;
+  return out;
+}
+function compute(r) {
+  const zero = () => Object.fromEntries(CATS.map(c => [c.id, 0]));
+  const E = zero(), IP = zero(), P = zero(), F = zero();
+  const failures = []; const perCourse = {}; let ungraded = 0;
+  for (const c of r.courses) {
+    if (!c.active) continue;
+    const per = c.credits / c.quarters.length;
+    const pc = { earned: 0, failed: [], open: 0 };
+    for (const q of c.quarters) {
+      const v = gradeOf(r, c.id, q);
+      if (PASS.has(v)) { E[c.cat] += per; pc.earned += per; }
+      else if (FAIL.has(v)) {
+        pc.failed.push(q);
+        if (isMadeUp(r, c.id, q)) { E[c.cat] += per; pc.earned += per; }
+        else { F[c.cat] += per; pc.open += per; }
+      }
+      else if (v === 'IP') IP[c.cat] += per;
+      else if (c.year >= r.grade) P[c.cat] += per;
+      else ungraded++;
+    }
+    perCourse[c.id] = pc;
+    if (pc.failed.length) failures.push({ course: c, quarters: pc.failed, per, open: pc.open });
+  }
+  const add = (a, b) => Object.fromEntries(CATS.map(c => [c.id, (a[c.id] || 0) + (b[c.id] || 0)]));
+  const A1 = allocate(E), A2 = allocate(add(E, IP)), A3 = allocate(add(add(E, IP), P));
+  const cats = CATS.map(c => ({
+    ...c,
+    earned: A1[c.id], ip: A2[c.id] - A1[c.id], planned: A3[c.id] - A2[c.id],
+    short: Math.max(0, c.req - A3[c.id]), stillNeeded: Math.max(0, c.req - A1[c.id]),
+    open: F[c.id], raw: E[c.id],
+  }));
+  const sum = k => cats.reduce((s, c) => s + c[k], 0);
+  const openCredits = failures.reduce((s, f) => s + f.open, 0);
+  const openQuarters = failures.reduce((s, f) => s + f.quarters.filter(q => !isMadeUp(r, f.course.id, q)).length, 0);
+  const rawTotal = Object.values(E).reduce((s, v) => s + v, 0);
+  return { cats, failures, perCourse, ungraded, spill: A1.spill,
+    earned: sum('earned'), ip: sum('ip'), planned: sum('planned'), short: sum('short'),
+    openCredits, openQuarters, rawTotal };
+}
+function catStatus(c) {
+  if (c.earned >= c.req - 1e-6) return { cls: 'good', text: 'Met' };
+  if (c.short <= 1e-6) return { cls: 'info', text: 'On track' };
+  return { cls: 'bad', text: 'Short ' + fmt(c.short) };
+}
+function planState(r, f) {
+  const p = r.plans[f.course.id];
+  const allDone = f.quarters.every(q => isMadeUp(r, f.course.id, q));
+  if (allDone || (p && p.status === 'Complete')) return { cls: 'good', text: 'Made up', rank: 3 };
+  const d = p && parseDate(p.deadline);
+  if (!d) return { cls: 'warn', text: 'Needs a plan and deadline', rank: 0, noDate: true };
+  const days = Math.round((d - today()) / 86400000);
+  if (days < 0) return { cls: 'bad', text: 'Overdue by ' + -days + (days === -1 ? ' day' : ' days'), rank: 1, d };
+  if (days === 0) return { cls: 'warn', text: 'Due today', rank: 1, d };
+  if (days <= 14) return { cls: 'warn', text: 'Due in ' + days + (days === 1 ? ' day' : ' days'), rank: 2, d };
+  return { cls: 'info', text: 'Due ' + niceDate(d), rank: 2, d };
+}
+function sortedFailures(r, calc) {
+  return calc.failures.map(f => ({ f, s: planState(r, f) })).sort((a, b) =>
+    a.s.rank - b.s.rank || (a.s.d ? a.s.d.getTime() : 0) - (b.s.d ? b.s.d.getTime() : 0) || a.f.course.year - b.f.course.year);
+}
+
+/* ---------- Rendering ---------- */
+let editing = false;
+const qf = {}; // remembered picks in the "Record a failed quarter" form
+
+function barHTML(parts, total, cls = '') {
+  const pct = v => Math.max(0, Math.min(100, v / total * 100)).toFixed(2) + '%';
+  return `<div class="bar ${cls}" aria-hidden="true">` +
+    `<span class="seg-earned" style="width:${pct(parts.earned)}"></span>` +
+    `<span class="seg-ip" style="width:${pct(parts.ip)}"></span>` +
+    `<span class="seg-planned" style="width:${pct(parts.planned)}"></span>` +
+    `<span class="seg-short" style="width:${pct(parts.short)}"></span></div>`;
+}
+
+function verdict(calc) {
+  const shortCats = calc.cats.filter(c => c.short > 1e-6);
+  if (calc.earned >= TOTAL_REQ - 1e-6) return { cls: 'good', text: 'Every graduation requirement is met.' };
+  if (!shortCats.length) return { cls: 'good', text: 'On track to graduate if current and scheduled courses are passed.' };
+  const list = shortCats.map(c => `${c.name} ${fmt(c.short)}`).join(', ');
+  return { cls: calc.openCredits > 0 ? 'bad' : 'warn',
+    text: `Not on track yet. ${fmt(calc.short)} more ${calc.short === 1 ? 'credit is' : 'credits are'} needed: ${list}.` };
+}
+
+function renderSummary(r, calc) {
+  const v = verdict(calc);
+  const next = sortedFailures(r, calc).find(x => x.s.rank < 3 && x.s.d);
+  const hasElective = r.courses.some(c => c.active && c.cat === 'elec');
+  $('secSummary').innerHTML = `
+    <div class="sec-head"><h2 id="sumTitle">Credit progress</h2><span class="muted">As of ${esc(niceDate(today()))}</span></div>
+    <div class="total">
+      <div class="big num">${fmt(calc.earned)} <small>of ${fmt(TOTAL_REQ)} credits</small></div>
+      <div class="stats">
+        <span>In progress <b>${fmt(calc.ip)}</b></span>
+        <span>Scheduled <b>${fmt(calc.planned)}</b></span>
+        <span>To make up <b>${fmt(calc.openCredits)}</b> (${calc.openQuarters} ${calc.openQuarters === 1 ? 'quarter' : 'quarters'})</span>
+        <span>Next deadline <b>${next ? esc(niceDate(next.s.d)) + ' · ' + esc(next.f.course.name) : 'none'}</b></span>
+      </div>
+    </div>
+    ${barHTML(calc, TOTAL_REQ, 'lg')}
+    <div class="legend">
+      <span><i class="seg-earned"></i>Earned</span><span><i class="seg-ip"></i>In progress</span>
+      <span><i class="seg-planned"></i>Scheduled (not graded yet)</span><span><i class="seg-short"></i>Still missing</span>
+    </div>
+    <p class="verdict ${v.cls}">${esc(v.text)}</p>
+    ${calc.ungraded ? `<p class="banner warn">${calc.ungraded} quarter${calc.ungraded === 1 ? '' : 's'} from earlier years ${calc.ungraded === 1 ? 'has' : 'have'} no grade yet. Fill ${calc.ungraded === 1 ? 'it' : 'them'} in below so the totals are complete.</p>` : ''}
+    <div class="cats">
+      ${calc.cats.map(c => {
+        const st = catStatus(c);
+        let note = '';
+        if (c.id === 'elec' && calc.spill > 1e-6) note = `Includes ${credits(calc.spill)} earned beyond other areas' requirements (for example extra PE or Ojibwe).`;
+        if (c.id === 'elec' && c.short > 1e-6 && !hasElective) note += (note ? ' ' : '') + 'Add elective courses under Edit courses to plan these.';
+        if (c.open > 1e-6) note += (note ? ' ' : '') + `${credits(c.open)} from failed quarters still to make up.`;
+        return `<div class="cat">
+          <div class="name">${esc(c.name)}<small>${fmt(c.req)} required</small></div>
+          ${barHTML(c, c.req)}
+          <div class="figs"><span><b>${fmt(c.earned)}</b> earned</span>${c.ip > 1e-6 ? `<span><b>${fmt(c.ip)}</b> in progress</span>` : ''}<span class="chip ${st.cls}">${st.text}</span></div>
+          ${note ? `<p class="note">${esc(note)}</p>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function gradeSelect(r, c, q) {
+  const v = gradeOf(r, c.id, q);
+  const made = FAIL.has(v) && isMadeUp(r, c.id, q);
+  const cls = made ? 'done' : PASS.has(v) ? 'v-pass' : v ? 'v-' + v : '';
+  return `<select class="gsel ${cls}" id="g-${esc(c.id)}-${q}" data-act="grade" data-cid="${esc(c.id)}" data-q="${q}"
+    aria-label="${esc(c.name)} quarter ${q}${made ? ' (made up)' : ''}" title="${made ? 'Failed, then made up' : ''}">
+    ${GRADE_OPTS.map(o => `<option value="${o}"${o === v ? ' selected' : ''}>${o || '–'}</option>`).join('')}
+  </select>`;
+}
+
+function renderGrades(r, calc) {
+  const years = YEARS.map(y => {
+    const list = r.courses.filter(c => c.year === y && (editing || c.active));
+    const inactive = r.courses.filter(c => c.year === y && !c.active);
+    const active = r.courses.filter(c => c.year === y && c.active);
+    const yTotal = active.reduce((s, c) => s + c.credits, 0);
+    const yEarned = active.reduce((s, c) => s + (calc.perCourse[c.id]?.earned || 0), 0);
+    let rows;
+    if (editing) {
+      rows = list.map(c => `<tr class="edit-row">
+        <td><label class="sr" for="cn-${esc(c.id)}">Course name</label><input type="text" id="cn-${esc(c.id)}" data-act="cname" data-cid="${esc(c.id)}" value="${esc(c.name)}" maxlength="80">
+          ${c.assumed ? `<small class="flag">${esc(c.assumed)}</small>` : ''}</td>
+        <td><label class="sr" for="cc-${esc(c.id)}">Counts toward</label><select id="cc-${esc(c.id)}" data-act="ccat" data-cid="${esc(c.id)}">${CATS.map(k => `<option value="${k.id}"${k.id === c.cat ? ' selected' : ''}>${esc(k.name)}</option>`).join('')}</select></td>
+        <td><label class="sr" for="cr-${esc(c.id)}">Credits</label><input type="number" id="cr-${esc(c.id)}" data-act="ccred" data-cid="${esc(c.id)}" value="${c.credits}" min="0" max="10" step="0.25"></td>
+        <td><div class="qboxes">${[1, 2, 3, 4].map(q => `<label><input type="checkbox" id="cq-${esc(c.id)}-${q}" data-act="cq" data-cid="${esc(c.id)}" data-q="${q}"${c.quarters.includes(q) ? ' checked' : ''}>Q${q}</label>`).join('')}</div></td>
+        <td class="c"><label class="sr" for="ca-${esc(c.id)}">On schedule</label><input type="checkbox" id="ca-${esc(c.id)}" data-act="cactive" data-cid="${esc(c.id)}"${c.active ? ' checked' : ''}></td>
+        <td><button type="button" class="link" data-act="cdel" data-cid="${esc(c.id)}">Remove</button></td>
+      </tr>`).join('');
+      rows = `<thead><tr><th>Course</th><th>Counts toward</th><th>Credits</th><th>Quarters taught</th><th class="c">On schedule</th><th><span class="sr">Remove</span></th></tr></thead><tbody>${rows}</tbody>`;
+    } else {
+      rows = list.map(c => {
+        const pc = calc.perCourse[c.id] || { earned: 0 };
+        return `<tr>
+          <td class="cname">${esc(c.name)}<small>${esc(CAT[c.cat].name)} · ${credits(c.credits)}${c.assumed ? ` <span class="flag" title="${esc(c.assumed)}">· check length</span>` : ''}</small></td>
+          ${[1, 2, 3, 4].map(q => `<td class="c">${c.quarters.includes(q) ? gradeSelect(r, c, q) : '<span class="na" aria-label="not taught this quarter">·</span>'}</td>`).join('')}
+          <td class="r">${fmt(pc.earned)} / ${fmt(c.credits)}</td>
+        </tr>`;
+      }).join('');
+      rows = `<thead><tr><th>Course</th><th class="c">Q1</th><th class="c">Q2</th><th class="c">Q3</th><th class="c">Q4</th><th class="r">Earned</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="muted">No courses on the schedule for this year.</td></tr>'}</tbody>`;
+    }
+    return `<div class="year">
+      <div class="year-head"><h3>${yearName(y)}</h3>
+        ${y === r.grade ? '<span class="chip info">Current year</span>' : ''}
+        <span class="muted num">${fmt(yEarned)} of ${fmt(yTotal)} credits earned</span></div>
+      <div class="tablewrap"><table>${rows}</table></div>
+      ${editing ? `<div><button type="button" data-act="cadd" data-year="${y}">Add a course to ${yearName(y)}</button></div>` :
+        inactive.length ? `<div class="inactive">Not on this schedule: ${inactive.map(c => `<button type="button" class="link" data-act="cactivate" data-cid="${esc(c.id)}">Add ${esc(c.name)}</button>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  const activeCourses = r.courses.filter(c => c.active);
+  $('secGrades').innerHTML = `
+    <div class="sec-head"><h2 id="gradesTitle">Quarter grades</h2>
+      <div class="btnrow">
+        ${editing ? '<button type="button" data-act="savedefault">Use this course list for new students</button>' : ''}
+        <button type="button" data-act="toggleedit" class="${editing ? 'primary' : ''}">${editing ? 'Done editing courses' : 'Edit courses'}</button>
+      </div></div>
+    ${editing ? `<p class="hint">Change names, credit values, quarters and which requirement a course counts toward. Changes apply to this student. Courses you don't need can be taken off the schedule without losing grades. Add electives, transfer credit or credit-recovery courses with <b>Add a course</b>.</p>` :
+    `<p class="hint">Pick a grade for each quarter. <b>F</b> (fail) or <b>I</b> (incomplete) adds that quarter to the make-up plan below. <b>P</b> = pass, <b>IP</b> = in progress. A failed quarter that has been made up turns green.</p>
+    <form class="quick" id="quickFail">
+      <span class="ttl">Record a failed quarter</span>
+      <label class="field">Course
+        <select id="qfCourse" data-act="qf">${YEARS.map(y => {
+          const cs = activeCourses.filter(c => c.year === y);
+          return cs.length ? `<optgroup label="${yearName(y)}">${cs.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</optgroup>` : '';
+        }).join('')}</select></label>
+      <label class="field">Quarter <select id="qfQuarter" data-act="qf"></select></label>
+      <label class="field">Result <select id="qfResult" data-act="qf"><option value="F">Failed (F)</option><option value="I">Incomplete (I)</option></select></label>
+      <button type="submit" class="primary">Add to make-up plan</button>
+    </form>`}
+    ${years}`;
+  if (!editing) {
+    for (const id of ['qfCourse', 'qfResult']) {
+      const el = $(id); if (qf[id] && [...el.options].some(o => o.value === qf[id])) el.value = qf[id];
+    }
+    fillQuarterOptions();
+    if (qf.qfQuarter && [...$('qfQuarter').options].some(o => o.value === qf.qfQuarter)) $('qfQuarter').value = qf.qfQuarter;
+  }
+}
+function fillQuarterOptions() {
+  const r = cur(); const sel = $('qfQuarter'); const cs = $('qfCourse');
+  if (!sel || !cs) return;
+  const c = findCourse(r, cs.value);
+  const prev = sel.value;
+  sel.innerHTML = (c ? c.quarters : []).map(q => `<option value="${q}">Q${q}</option>`).join('');
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+function renderPlans(r, calc) {
+  const items = sortedFailures(r, calc);
+  const body = items.length ? items.map(({ f, s }) => {
+    const c = f.course; const p = planFor(r, c.id); const id = esc(c.id);
+    return `<article class="plan s-${s.cls}">
+      <div class="plan-head">
+        <div><h3>${esc(c.name)}</h3>
+          <p>${yearName(c.year)} · ${esc(CAT[c.cat].name)} · ${qList(f.quarters)} · ${credits(f.per * f.quarters.length)}${f.open > 1e-6 && f.open < f.per * f.quarters.length - 1e-6 ? `, ${fmt(f.open)} still open` : ''}</p></div>
+        <span class="chip ${s.cls}">${esc(s.text)}</span>
+      </div>
+      <div class="plan-grid">
+        <label class="field">How it will be made up
+          <select id="pm-${id}" data-act="pmethod" data-cid="${id}"><option value="">Choose a method…</option>${METHODS.map(m => `<option${m === p.method ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+        <label class="field">Deadline
+          <input type="date" id="pd-${id}" data-act="pdeadline" data-cid="${id}" value="${esc(p.deadline)}"></label>
+        <label class="field">Status
+          <select id="ps-${id}" data-act="pstatus" data-cid="${id}">${STATUSES.map(m => `<option${m === p.status ? ' selected' : ''}>${m}</option>`).join('')}</select></label>
+        <label class="field wide">Details and checkpoints
+          <input type="text" id="pt-${id}" data-act="pdetails" data-cid="${id}" value="${esc(p.details)}" maxlength="300" placeholder="e.g. Online English 10, units 1–4. Check in every Friday."></label>
+      </div>
+      <fieldset class="madeup"><legend>Made up:</legend>
+        ${f.quarters.map(q => `<label><input type="checkbox" id="pq-${id}-${q}" data-act="pdone" data-cid="${id}" data-q="${q}"${isMadeUp(r, c.id, q) ? ' checked' : ''}>Q${q} (${fmt(f.per)})</label>`).join('')}
+      </fieldset>
+    </article>`;
+  }).join('') : '<p class="empty">No failed quarters. Nothing to make up right now.</p>';
+  $('secPlans').innerHTML = `
+    <div class="sec-head"><h2 id="plansTitle">Make-up plan</h2>
+      ${items.length ? `<span class="muted num">${calc.openQuarters} of ${items.reduce((s, x) => s + x.f.quarters.length, 0)} failed quarters still open</span>` : ''}</div>
+    <p class="hint">Each failed quarter needs a plan and a deadline. Check a quarter off when the work is accepted; its credit then counts.</p>
+    <div class="plans">${body}</div>`;
+}
+
+function renderInfo(r) {
+  const set = (id, v) => { const el = $(id); if (el.value !== String(v)) el.value = v; };
+  set('fLabel', r.label); set('fGrade', r.grade); set('fClassOf', r.classOf); set('fNote', r.note);
+}
+function recordName(r) { return (r.label || 'Unnamed student') + ' · ' + yearName(r.grade); }
+function renderPicker() {
+  $('recordSelect').innerHTML = store.records.map(r => `<option value="${esc(r.id)}"${r.id === store.currentId ? ' selected' : ''}>${esc(recordName(r))}</option>`).join('');
+  $('btnBackup').textContent = `Back up all students (${store.records.length})`;
+}
+
+function renderAll(skip) {
+  const r = cur(); const calc = compute(r);
+  const active = document.activeElement; const fid = active && active.id;
+  const sel = active && typeof active.selectionStart === 'number' ? [active.selectionStart, active.selectionEnd] : null;
+  renderPicker();
+  if (skip !== 'info') renderInfo(r);
+  renderSummary(r, calc);
+  if (skip !== 'grades') renderGrades(r, calc);
+  if (skip !== 'plans') renderPlans(r, calc);
+  if (fid && document.activeElement !== $(fid) && $(fid)) {
+    const el = $(fid); el.focus({ preventScroll: true });
+    if (sel) try { el.setSelectionRange(sel[0], sel[1]); } catch (e) { /* not a text field */ }
+  }
+}
+
+/* ---------- Print snapshot ---------- */
+function renderPrint() {
+  const r = cur(); const calc = compute(r); const v = verdict(calc);
+  const items = sortedFailures(r, calc);
+  const years = YEARS.filter(y => y <= r.grade);
+  $('printView').innerHTML = `
+    <h1>Graduation Credit Snapshot</h1>
+    <div class="p-meta">Student ID: <b>${esc(r.label || '—')}</b> &nbsp;·&nbsp; ${yearName(r.grade)}${r.classOf ? ` &nbsp;·&nbsp; Class of ${esc(r.classOf)}` : ''} &nbsp;·&nbsp; As of ${esc(niceDate(today()))}</div>
+    <div class="p-total"><span><b>${fmt(calc.earned)}</b> of ${fmt(TOTAL_REQ)} credits earned toward graduation</span>
+      <span>In progress: ${fmt(calc.ip)}</span><span>Failed credit to make up: ${fmt(calc.openCredits)}</span></div>
+    <div class="p-verdict">${esc(v.text)}</div>
+
+    <h2>Requirements</h2>
+    <table><thead><tr><th>Area</th><th>Required</th><th>Earned</th><th>In progress</th><th>Still needed</th><th>Status</th></tr></thead><tbody>
+      ${calc.cats.map(c => { const st = catStatus(c); return `<tr><td>${esc(c.name)}</td><td>${fmt(c.req)}</td><td>${fmt(c.earned)}</td><td>${c.ip > 1e-6 ? fmt(c.ip) : ''}</td><td>${c.stillNeeded > 1e-6 ? fmt(c.stillNeeded) : '0'}</td><td class="${st.cls === 'bad' ? 'p-short' : ''}">${st.text}</td></tr>`; }).join('')}
+      <tr><td><b>Total</b></td><td><b>${fmt(TOTAL_REQ)}</b></td><td><b>${fmt(calc.earned)}</b></td><td>${calc.ip > 1e-6 ? fmt(calc.ip) : ''}</td><td><b>${fmt(Math.max(0, TOTAL_REQ - calc.earned))}</b></td><td></td></tr>
+    </tbody></table>
+
+    <h2>Make-up plan</h2>
+    ${items.length ? `<table><thead><tr><th>Course</th><th>Quarters</th><th>Credit</th><th>Plan</th><th>Deadline</th><th>Status</th></tr></thead><tbody>
+      ${items.map(({ f, s }) => { const p = r.plans[f.course.id] || {}; return `<tr><td>${esc(f.course.name)} (${f.course.year})</td><td>${qList(f.quarters)}</td><td>${fmt(f.per * f.quarters.length)}</td>
+        <td>${esc(p.method || 'Not planned yet')}${p.details ? '<br>' + esc(p.details) : ''}</td><td>${p.deadline ? esc(niceDate(parseDate(p.deadline))) : '—'}</td><td>${esc(s.text)}</td></tr>`; }).join('')}
+    </tbody></table>` : '<p>No failed quarters. Nothing to make up.</p>'}
+
+    <h2>Quarter grades</h2>
+    <div class="p-years">${years.map(y => {
+      const cs = r.courses.filter(c => c.year === y && c.active);
+      return `<div><h3>${yearName(y)}</h3><table><thead><tr><th>Course</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Earned</th></tr></thead><tbody>
+        ${cs.map(c => `<tr><td>${esc(c.name)}</td>${[1, 2, 3, 4].map(q => {
+          if (!c.quarters.includes(q)) return '<td>·</td>';
+          const g = gradeOf(r, c.id, q); const made = FAIL.has(g) && isMadeUp(r, c.id, q);
+          return `<td class="${FAIL.has(g) && !made ? 'p-fail' : ''}">${esc(g)}${made ? '→MU' : ''}</td>`;
+        }).join('')}<td>${fmt(calc.perCourse[c.id]?.earned || 0)}/${fmt(c.credits)}</td></tr>`).join('')}
+      </tbody></table></div>`;
+    }).join('')}</div>
+
+    ${r.note ? `<h2>Note from your advisor</h2><div class="p-note">${esc(r.note)}</div>` : ''}
+    <p class="p-foot">Key: P = pass, F = fail, I = incomplete, IP = in progress, →MU = failed then made up, · = course not taught that quarter. Each quarter of a 1-credit course is 0.25 credit. Credits earned beyond an area's requirement count toward Electives.</p>`;
+}
+let savedTitle = document.title;
+window.addEventListener('beforeprint', () => {
+  renderPrint();
+  const r = cur(); savedTitle = document.title;
+  document.title = `Credit snapshot ${r.label || 'student'} ${isoDay(today())}`;
+});
+window.addEventListener('afterprint', () => { document.title = savedTitle; });
+
+/* ---------- Dialog + toast ---------- */
+function ask(title, body, buttons) {
+  return new Promise(resolve => {
+    const d = $('dlg');
+    $('dlgTitle').textContent = title; $('dlgBody').textContent = body;
+    $('dlgBtns').innerHTML = buttons.map(([v, label, cls]) => `<button type="button" value="${v}" class="${cls || ''}">${esc(label)}</button>`).join('');
+    const done = v => { d.close(); resolve(v); };
+    $('dlgBtns').onclick = e => { const b = e.target.closest('button'); if (b) done(b.value); };
+    d.oncancel = () => resolve('cancel');
+    d.showModal();
+    $('dlgBtns').querySelector('button:last-child').focus();
+  });
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ---------- Files ---------- */
+function slug(s) { return String(s || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30); }
+function download(name, records) {
+  const payload = { format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), records };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+async function importFile(file) {
+  let data;
+  try { data = JSON.parse(await file.text()); }
+  catch (e) { toast('That file could not be read. Choose the .json file saved from this tracker.'); return; }
+  let recs = [];
+  if (data && data.format === FILE_FORMAT && Array.isArray(data.records)) recs = data.records;
+  else if (data && Array.isArray(data.courses)) recs = [data];
+  recs = recs.map(normalizeRecord).filter(Boolean);
+  if (!recs.length) { toast('This file has no student data from the credit tracker.'); return; }
+  const clashes = recs.filter(r => store.records.some(x => x.id === r.id));
+  let mode = 'replace';
+  if (clashes.length) {
+    const who = clashes.length === 1 ? `"${clashes[0].label || 'Unnamed student'}"` : `${clashes.length} students`;
+    mode = await ask('Replace saved data?', `This file has newer data for ${who}, who ${clashes.length === 1 ? 'is' : 'are'} already saved in this browser.`,
+      [['cancel', 'Cancel'], ['copy', 'Keep both'], ['replace', 'Replace with file', 'primary']]);
+    if (mode !== 'replace' && mode !== 'copy') return;
+  }
+  // A student opening their first file: drop the empty starter record.
+  if (store.records.length === 1 && isBlank(store.records[0]) && !clashes.length) store.records = [];
+  for (const r of recs) {
+    const i = store.records.findIndex(x => x.id === r.id);
+    if (i >= 0 && mode === 'replace') store.records[i] = r;
+    else { if (i >= 0) { r.id = uid('s'); r.label = (r.label || 'Student') + ' (copy)'; } store.records.push(r); }
+  }
+  store.currentId = recs[0].id; editing = false;
+  save(false); $('welcome').hidden = true; renderAll();
+  toast(recs.length === 1 ? `Opened ${recs[0].label || 'student'}.` : `Opened ${recs.length} students.`);
+}
+
+/* ---------- Events ---------- */
+const TEXT_ACTS = { label: 'info', classof: 'info', note: 'info', cname: 'grades', ccred: 'grades', pdetails: 'plans' };
+function applyText(t) {
+  const r = cur(); const a = t.dataset.act; const cid = t.dataset.cid;
+  if (a === 'label') r.label = t.value.slice(0, 40);
+  else if (a === 'classof') r.classOf = t.value.replace(/\D/g, '').slice(0, 4);
+  else if (a === 'note') r.note = t.value;
+  else if (a === 'cname') findCourse(r, cid).name = t.value || 'Course';
+  else if (a === 'ccred') { const n = Number(t.value); if (t.value !== '' && n >= 0 && n <= 10) findCourse(r, cid).credits = n; else return false; }
+  else if (a === 'pdetails') planFor(r, cid).details = t.value;
+  return true;
+}
+document.addEventListener('input', e => {
+  const t = e.target; const a = t.dataset && t.dataset.act;
+  if (!a || !(a in TEXT_ACTS)) return;
+  if (applyText(t) === false) return;
+  save();
+  const r = cur(); const calc = compute(r);
+  renderSummary(r, calc);
+  if (a === 'label') renderPicker();
+});
+document.addEventListener('change', e => {
+  const t = e.target; const a = t.dataset && t.dataset.act; if (!a) return;
+  const r = cur(); const cid = t.dataset.cid; const q = Number(t.dataset.q);
+  if (a in TEXT_ACTS) {
+    // Text edits never rebuild the section holding other controls, so a click that blurs the field still lands.
+    applyText(t); save();
+    const calc = compute(r);
+    renderPicker(); renderSummary(r, calc);
+    if (a === 'cname' || a === 'ccred') renderPlans(r, calc);
+    return;
+  }
+  switch (a) {
+    case 'qf':
+      qf[t.id] = t.value;
+      if (t.id === 'qfCourse') { fillQuarterOptions(); qf.qfQuarter = $('qfQuarter').value; }
+      return;
+    case 'grade-level': r.grade = Number(t.value); break;
+    case 'grade': {
+      const g = (r.grades[cid] ||= {});
+      if (t.value) g[q] = t.value; else delete g[q];
+      if (!FAIL.has(t.value) && r.plans[cid]) delete r.plans[cid].done[q];
+      if (t.value && FAIL.has(t.value)) toast(`${findCourse(r, cid).name} Q${q} added to the make-up plan.`);
+      break;
+    }
+    case 'ccat': findCourse(r, cid).cat = t.value; break;
+    case 'cq': {
+      const c = findCourse(r, cid);
+      const set = new Set(c.quarters); t.checked ? set.add(q) : set.delete(q);
+      if (!set.size) { t.checked = true; toast('A course needs at least one quarter.'); return; }
+      c.quarters = [...set].sort(); break;
+    }
+    case 'cactive': findCourse(r, cid).active = t.checked; break;
+    case 'pmethod': planFor(r, cid).method = t.value; break;
+    case 'pdeadline': planFor(r, cid).deadline = parseDate(t.value) ? t.value : ''; break;
+    case 'pstatus': {
+      const p = planFor(r, cid); p.status = t.value;
+      if (t.value === 'Complete') { const c = findCourse(r, cid); for (const qq of c.quarters) if (FAIL.has(gradeOf(r, cid, qq))) p.done[qq] = true; }
+      else if (Object.keys(p.done).length && t.value !== 'Complete') { /* keep checked quarters */ }
+      break;
+    }
+    case 'pdone': {
+      const p = planFor(r, cid);
+      if (t.checked) p.done[q] = true; else delete p.done[q];
+      const c = findCourse(r, cid);
+      const failedQs = c.quarters.filter(qq => FAIL.has(gradeOf(r, cid, qq)));
+      const all = failedQs.every(qq => p.done[qq]);
+      if (all) p.status = 'Complete';
+      else if (p.status === 'Complete' || Object.keys(p.done).length) p.status = 'In progress';
+      if (t.checked) toast(`Q${q} of ${c.name} marked as made up. Its credit now counts.`);
+      break;
+    }
+    default: return;
+  }
+  save(); renderAll();
+});
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'quickFail') return;
+  e.preventDefault();
+  const r = cur(); const cid = $('qfCourse').value; const q = Number($('qfQuarter').value); const v = $('qfResult').value;
+  const c = findCourse(r, cid); if (!c || !q) return;
+  (r.grades[cid] ||= {})[q] = v;
+  if (r.plans[cid]) delete r.plans[cid].done[q];
+  save(); renderAll();
+  toast(`${c.name} Q${q} added to the make-up plan.`);
+  const card = $('pm-' + cid); if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b || b.tagName !== 'BUTTON') return;
+  const r = cur(); const cid = b.dataset.cid;
+  switch (b.dataset.act) {
+    case 'toggleedit': editing = !editing; renderAll(); $('gradesTitle').scrollIntoView({ block: 'nearest' }); return;
+    case 'cactivate': findCourse(r, cid).active = true; break;
+    case 'cadd': {
+      const c = normalizeCourse({ id: uid('c'), year: Number(b.dataset.year), name: 'New course', cat: 'elec', credits: 1 });
+      r.courses.push(c); save(); renderAll();
+      const el = $('cn-' + c.id); if (el) { el.focus(); el.select(); }
+      return;
+    }
+    case 'cdel': {
+      const c = findCourse(r, cid);
+      const hasData = r.grades[cid] && Object.keys(r.grades[cid]).length;
+      if (hasData) {
+        const ok = await ask(`Remove ${c.name}?`, 'This course has grades entered. Removing it deletes those grades and any make-up plan for it. To keep them, uncheck "On schedule" instead.', [['cancel', 'Cancel'], ['ok', 'Remove course', 'danger']]);
+        if (ok !== 'ok') return;
+      }
+      r.courses = r.courses.filter(x => x.id !== cid); delete r.grades[cid]; delete r.plans[cid];
+      break;
+    }
+    case 'savedefault':
+      store.defaultCourses = clone(r.courses).map(c => ({ ...c }));
+      save(false); toast('New students will start with this course list.'); return;
+    default: return;
+  }
+  save(); renderAll();
+});
+
+$('recordSelect').addEventListener('change', e => { store.currentId = e.target.value; editing = false; save(false); renderAll(); });
+$('btnNew').addEventListener('click', () => {
+  const r = newRecord(); store.records.push(r); store.currentId = r.id; editing = false;
+  save(); renderAll(); $('fLabel').focus(); toast('New student added. Enter an ID or initials to start.');
+});
+$('btnImport').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importFile(f); });
+$('btnExport').addEventListener('click', () => {
+  const r = cur();
+  download(`credits-${slug(r.label) || 'student'}-${isoDay(today())}.json`, [r]);
+  toast('File saved to your Downloads folder.');
+});
+$('btnBackup').addEventListener('click', () => {
+  download(`credits-backup-${isoDay(today())}.json`, store.records);
+  toast(`Backed up ${store.records.length} ${store.records.length === 1 ? 'student' : 'students'}.`);
+});
+$('btnDelete').addEventListener('click', async () => {
+  const r = cur();
+  const ok = await ask(`Delete ${r.label || 'this student'}?`, 'Their grades and make-up plan are removed from this browser. Save a file first if you may need them again.', [['cancel', 'Cancel'], ['ok', 'Delete student', 'danger']]);
+  if (ok !== 'ok') return;
+  store.records = store.records.filter(x => x.id !== r.id);
+  if (!store.records.length) store.records.push(newRecord());
+  store.currentId = store.records[0].id; editing = false;
+  save(false); renderAll(); toast('Student deleted.');
+});
+$('btnPrint').addEventListener('click', () => { renderPrint(); window.print(); });
+
+/* ---------- Start ---------- */
+load();
+save(false);
+renderAll();
+</script>
+</body>
+</html>
